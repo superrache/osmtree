@@ -40,23 +40,22 @@ if (prod) {
 
 router.post('/api/plantnet-identify', upload.single('image'), async (ctx) => {
   try {
-    if (!ctx.request.body) throw new Error('malformed request')
-    if (!ctx.request.body['organs']) throw new Error('organs required')
-    if (!ctx.request.body['lang']) throw new Error('lang required')
+    if (!ctx.request['body']) throw new Error('malformed request')
+    if (!ctx.request['body']['organs']) throw new Error('organs required')
+    if (!ctx.request['body']['lang']) throw new Error('lang required')
     if (!ctx.file) throw new Error('image file required')
 
-    const organs = ctx.request.body['organs']
-    const lang = ctx.request.body['lang']
+    const organs = ctx.request['body']['organs']
+    const lang = ctx.request['body']['lang']
 
     console.log(`plantnet identification type ${organs} lang ${lang} for an image of ${ctx.file.size}B`)
 
     // build a plantnet post identify request
     const form = new FormData()
     form.append('organs', organs)
-    const blob = new Blob([ctx.file.buffer], { type: ctx.file.mimetype })
-    form.append('images', blob, ctx.file.originalname)
+    form.append('images', ctx.file.buffer, ctx.file.originalname)
 
-    axios.post(
+    const response = await axios.post(
       `https://my-api.plantnet.org/v2/identify/all?api-key=2b10uKobhNtnceQ7cvc3tseye&include-related-images=true&lang=${lang}`,
       form,
       {
@@ -65,25 +64,15 @@ router.post('/api/plantnet-identify', upload.single('image'), async (ctx) => {
           'Host': 'https://osmtree.onrender.com/'
         }
       }
-    ).then((response) => {
-      console.log('success')
-      console.log('success, best match: ', response.data.bestMatch)
-      ctx.body = {
-        sucess: 200,
-        results: response.data.results
-      }
-    }).catch((error) => {
-      console.error('plantnet API error')
-      if(error.response && error.response.data) {
-        console.error(error.response.data)
-        ctx.body = {error: 21, data: error.response.data}
-      } else {
-        console.error(error)
-        ctx.body = {error: 22, data: {message: 'unknown error from plantnet API call'}}
-      }
-    })
+    )
+
+    console.log('success, best match: ', response.data.bestMatch)
+    ctx.body = {
+      sucess: 200,
+      results: response.data.results
+    }
   } catch (e) {
-    console.log(e)
+    console.log(e.message)
     ctx.body = { error: -1, data: {message: e.message} }
   }
 })
