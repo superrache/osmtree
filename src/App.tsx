@@ -7,8 +7,25 @@ import fruitImg from './assets/fruit.svg'
 import barkImg from './assets/bark.svg'
 import './App.css'
 
+type Organ = {
+  id: string
+  selected: boolean
+  icon: string
+}
+
+class Result {
+  imageUrl: string = ''
+  score: number = 0
+  genus: string = ''
+  species: string = ''
+  localizedSpecies: string = ''
+}
+
 function App() {
-  const [organs, setOrgans] = useState([
+  const serverUrl = 'http://localhost:3000/api'
+  const maxResults = 12
+
+  const [organs, setOrgans] = useState<Organ[]>([
     {id: 'leaf', selected: true, icon: leafImg },
     {id: 'flower', selected: false, icon: flowerImg },
     {id: 'fruit', selected: false, icon: fruitImg },
@@ -16,15 +33,17 @@ function App() {
   ])
 
   const [pictureFile, setPictureFile] = useState<File>()
-  const [picturePreview, setPicturePreview] = useState('')
-  const [readyToSend, setReadyToSend] = useState(false)
-  const [organ, setOrgan] = useState(organs[0])
+  const [picturePreview, setPicturePreview] = useState<string>('')
+  const [readyToSend, setReadyToSend] = useState<boolean>(false)
+  const [localizedSpeciesKey, setLocalizedSpeciesKey] = useState<string>('species:en')
+  const [results, setResults] = useState<Result[]>([])
 
   const onFileInput = (e: ChangeEvent<HTMLInputElement>) => {
-    console.log(e)
     if (e.target.files && e.target.files.length > 0) {
-      setPictureFile(e.target.files[0])
-      if (pictureFile) setPicturePreview(URL.createObjectURL(pictureFile))
+      const file = e.target.files[0]
+      console.log('onFileInput', file.name)
+      setPictureFile(file)
+      setPicturePreview(URL.createObjectURL(file))
     }
   }
 
@@ -36,16 +55,57 @@ function App() {
     console.log('onOrganSelect', e)
     for(const organ of organs) {
       organ.selected = (organ.id === id)
-      if(organ.id === id) {
-        console.log('select organ ' + organ.id)
-        setOrgan(organ)
-      }
+      if(organ.id === id) console.log('select organ ' + organ.id)
     }
     console.log(organs)
   }
 
   const onIdentify = () => {
     console.log('onIdentify')
+    // save current language to save result in the good osm key
+    const lang = 'fr' // TODO: get user lang
+    setLocalizedSpeciesKey(`species:${lang}`)
+
+    const organ = organs.find(o => o.selected)
+
+    if (organ !== undefined && pictureFile) {
+      const form = new FormData()
+      form.append('organs', organ.id) // only one, TODO: could be several
+      form.append('image', pictureFile)
+      form.append('lang', lang)
+
+      const url = new URL(`${serverUrl}/plantnet-identify`)
+
+      fetch(url.toString(), {
+        method: 'post',
+        body: form
+      }).then((response) => {
+        if (response.ok) {
+          response.json().then((r) => {
+            setResults([])
+            for(const res of r.results) {
+              if(results.length > maxResults) break
+              let result = new Result()
+              if('species' in res) {
+                let species = res['species']
+                if('commonNames' in species && species['commonNames'].length > 0) result.localizedSpecies = species['commonNames'][0]
+                if('genus' in species && 'scientificNameWithoutAuthor' in species['genus']) result.genus = species['genus']['scientificNameWithoutAuthor']
+                if('scientificNameWithoutAuthor' in species) result.species = species['scientificNameWithoutAuthor']
+              }
+                /* TODO: how to get these info from plantnet?
+                this.editedProperties['leaf_cycle'] = ''
+                this.editedProperties['leaf_type'] = ''*/
+
+              result.imageUrl = res.images.length > 0 && res.images[0].url.m !== undefined ? res.images[0].url.m : ''
+              result.score = res['score']
+              results.push(result)
+            }
+          }).catch(console.error)
+        }
+      }).catch((error) => {
+        console.error(error)
+      })
+    }
   }
 
   const onSave = () => {
