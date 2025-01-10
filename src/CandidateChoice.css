@@ -1,0 +1,37 @@
+.result {
+    position: relative;
+    margin: 5px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 10px;
+}
+  
+.result:hover {
+    box-shadow: 0 0 0 1pt grey;
+}
+  
+.result_selected {
+    background-color: #FF9454;
+}
+  
+.result-image {
+    border-radius: 10px;
+    width: 100%;
+    height: auto;
+}
+  
+.result-info {
+    position: absolute;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: white;
+    bottom: 0;
+    left: 0;
+    padding-left: 15px;
+    font-size: 17px;
+    z-index: 5;
+}
+  
+.result-label-title {
+    font-weight: bold;
+}
