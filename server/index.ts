@@ -1,6 +1,7 @@
 import express from 'express'
 import multer from 'multer'
 import axios from 'axios'
+import { fileURLToPath } from 'url'
 import path from 'path'
 import FormData from 'form-data'
 import cors from 'cors'
@@ -94,6 +95,7 @@ app.post('/api/plantnet-identify', upload.single('image'), (req, res) => {
 
 // serve static client files for production
 if (prod) {
+    const __filename = fileURLToPath(import.meta.url)
     const __dirname = path.dirname(__filename)
     const staticDir = path.resolve(__dirname, '../../dist/client')
     console.log('Serving static files: ' + staticDir)
