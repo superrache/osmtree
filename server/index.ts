@@ -94,6 +94,7 @@ app.post('/api/plantnet-identify', upload.single('image'), (req, res) => {
 
 // serve static client files for production
 if (prod) {
+    const __dirname = path.dirname(__filename)
     const staticDir = path.resolve(__dirname, '../../dist/client')
     console.log('Serving static files: ' + staticDir)
     app.use(express.static(staticDir))
