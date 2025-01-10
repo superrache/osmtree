@@ -15,7 +15,7 @@ app.use(cors({
 
 // multer config
 const memoryStorage = multer.memoryStorage()
-const imageFilter = function(req, file, cb) {
+const imageFilter = function(req: any, file: any, cb: CallableFunction) {
     // Accept images only
     if (!file.originalname.match(/\.(jpg|JPG|jpeg|JPEG|png|PNG)$/)) { // plantnet accepts only png and jpeg files
         req.fileValidationError = 'Only image files are allowed'
@@ -100,13 +100,13 @@ if (prod) {
 }
 
 function listRoutes() {
-    app._router.stack.forEach((middleware) => {
+    app._router.stack.forEach((middleware: any) => {
         if (middleware.route) {
             // Routes directes
             console.log(`${Object.keys(middleware.route.methods)} ${middleware.route.path}`)
         } else if (middleware.name === 'router') {
             // Router middleware
-            middleware.handle.stack.forEach((handler) => {
+            middleware.handle.stack.forEach((handler: any) => {
                 if (handler.route) {
                     const path = handler.route.path
                     const methods = Object.keys(handler.route.methods)
