@@ -34,10 +34,11 @@ const upload = multer({
 
 const formatMemoryUsage = (data: number) => `${Math.round(data / 1024 / 1024 * 100) / 100} MB`
 
-app.get('/api/status', (req, res) => {
-    console.log('/api/status')
+app.get('/api', (req, res) => {
+    console.log('/api')
     const memoryData = process.memoryUsage()
     const memoryUsage = {
+        status: 'running',
         rss: `${formatMemoryUsage(memoryData.rss)} -> Resident Set Size - total memory allocated for the process execution`,
         heapTotal: `${formatMemoryUsage(memoryData.heapTotal)} -> total size of the allocated heap`,
         heapUsed: `${formatMemoryUsage(memoryData.heapUsed)} -> actual memory used during the execution`,
@@ -97,7 +98,7 @@ app.post('/api/plantnet-identify', upload.single('image'), (req, res) => {
 if (prod) {
     const __filename = fileURLToPath(import.meta.url)
     const __dirname = path.dirname(__filename)
-    const staticDir = path.resolve(__dirname, '../../dist/client')
+    const staticDir = path.resolve(__dirname, '../../dist')
     console.log('Serving static files: ' + staticDir)
     app.use(express.static(staticDir))
 }
