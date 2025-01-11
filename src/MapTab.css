@@ -19,3 +19,13 @@
     font-weight: 500;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
+
+@media screen {
+    .maplibregl-ctrl-attrib.maplibregl-compact {
+        bottom: 62px;
+    }
+}
+
+.maplibregl-ctrl-scale {
+    bottom: 62px;
+}
