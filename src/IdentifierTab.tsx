@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import logo from '/osmtree.svg' // also favicon
-import './Identifier.css'
+import './IdentifierTab.css'
 import IdentifyForm from './IdentifyForm'
 import { IdentifyParams, PlantNetCandidate } from './types'
 import CandidateChoice from './CandidateChoice'
 import { getApiUrl } from './utils'
 
-const Identifier = () => {
+const IdentifierTab = () => {
   const maxResults = 12
 
   const [localizedSpeciesKey, setLocalizedSpeciesKey] = useState<string>('species:en')
@@ -50,7 +49,8 @@ const Identifier = () => {
           genus: genus,
           localizedSpecies: localizedSpecies,
           score: res['score'],
-          species: speciesScientificName
+          species: speciesScientificName,
+          selected: false
         }
 
           /* TODO: how to get these info from plantnet?
@@ -70,12 +70,6 @@ const Identifier = () => {
 
   return (
     <>
-      <div>
-        <h1>
-          <img src={logo} className="logo" alt="osmtree" />
-          osmtree</h1>
-      </div>
-
       <IdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
 
       { isLoading && <div>Identification en cours...</div>}
@@ -85,4 +79,4 @@ const Identifier = () => {
   )
 }
 
-export default Identifier  
+export default IdentifierTab  

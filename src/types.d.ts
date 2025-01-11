@@ -20,6 +20,7 @@ export type PlantNetCandidate = {
     genus: string
     species: string
     localizedSpecies: string
+    selected: boolean
 }
 
 export type CandidateChoiceParams = {

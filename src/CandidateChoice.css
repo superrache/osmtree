@@ -1,3 +1,7 @@
+.results {
+    width: 300px;
+}
+
 .result {
     position: relative;
     margin: 5px;
@@ -9,11 +13,11 @@
 .result:hover {
     box-shadow: 0 0 0 1pt grey;
 }
-  
+
 .result_selected {
     background-color: #FF9454;
 }
-  
+
 .result-image {
     border-radius: 10px;
     width: 100%;
