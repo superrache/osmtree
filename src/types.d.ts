@@ -1,3 +1,11 @@
+export type DataResponse = {
+    codename?: string
+    error?: number
+    message?: string
+    type?: 'FeatureCollection'
+    features?: GeoJSON.Feature[]
+}
+
 export type Organ = {
     id: string
     selected: boolean

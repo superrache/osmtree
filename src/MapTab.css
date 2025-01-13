@@ -4,11 +4,11 @@
     height: 100%;
     margin: 0;
     padding: 0;
-    background-color: #144;
 }
 
 .title {
     position: absolute;
+    z-index: 1000;
     top: 5px;
     left: 5px;
     background-color: #333;
@@ -20,12 +20,27 @@
     font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
-@media screen {
-    .maplibregl-ctrl-attrib.maplibregl-compact {
-        bottom: 62px;
-    }
+.loading {
+    position: absolute;
+    z-index: 1001;
+    top: 25px;
+    left: 50%;
+    background-color: black;
+    color:cadetblue;
+    border-radius: 5px;
 }
 
-.maplibregl-ctrl-scale {
-    bottom: 62px;
+.feature-marker {
+    display: block;
+    border: none;
+    border-radius: 100%;
+    outline: 2px solid white;
+    cursor: pointer;
+    padding: 3px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #0c0;
 }

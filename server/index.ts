@@ -5,8 +5,13 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import FormData from 'form-data'
 import cors from 'cors'
+import { json } from 'stream/consumers'
 
 const prod = (process.env.NODE_ENV === 'production')
+
+const instances = ['https://gall.openstreetmap.de', 'https://lambert.openstreetmap.de', 'https://lz4.overpass-api.de', 'https://z.overpass-api.de']
+const simpleCache: Record<string, GeoJSON.FeatureCollection> = {} // request url -> feature collection result
+// TODO: count cache age and empty old cache
 
 const app = express()
 
@@ -34,6 +39,35 @@ const upload = multer({
 
 const formatMemoryUsage = (data: number) => `${Math.round(data / 1024 / 1024 * 100) / 100} MB`
 
+const osmToPointFeatureCollection = (elements: any) => {
+    const features: Array<GeoJSON.Feature> = []
+
+    try {
+        elements.forEach(function(e: any) {
+            if(e.type === 'node' && e.hasOwnProperty('tags')) {
+                const feature: GeoJSON.Feature = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Point",
+                        coordinates: [e.lon, e.lat]
+                    },
+                    properties: e.tags,
+                    id: e.id
+                }
+                features.push(feature)
+            }
+        })
+    } catch(e) {
+        console.error(e)
+    }
+
+    const geojson: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features: features
+    }
+    return geojson
+  }
+
 app.get('/api', (req, res) => {
     console.log('/api')
     const memoryData = process.memoryUsage()
@@ -45,6 +79,51 @@ app.get('/api', (req, res) => {
         external: `${formatMemoryUsage(memoryData.external)} -> V8 external memory`,
     }
     res.json(memoryUsage)
+})
+
+app.get('/api/data', (req, res) => {
+    try {
+        if (req.query.bounds === undefined || req.query.codename === undefined) {
+            res.json({error: 3, message: 'bounds and codename parameters required'})
+        } else {
+            const instance = instances[Math.floor(Math.random() * instances.length)]
+
+            const codename = req.query.codename
+            const bounds = req.query.bounds
+            console.log(`/api/data request on ${instance} for codename: ${req.query.codename} and bounds: ${bounds}`)
+
+            const filter = '["natural"~"shrub|tree"]'
+            const query = `[out:json][timeout:25];(node${filter}(${bounds}););out body;>;out skel qt;`
+
+            const fullUrl = `${instance}/api/interpreter?data=${encodeURIComponent(query)}`
+            //console.log(fullUrl)
+
+            if(simpleCache.hasOwnProperty(query)) {
+                console.log('[result in cache]')
+                res.json({...simpleCache[query], codename: codename})
+            } else {
+                axios.get(fullUrl).then((response) => {
+                    if (response.data && response.data.elements) {
+                        const geojson = osmToPointFeatureCollection(response.data.elements)
+                        simpleCache[query] = geojson
+                        res.json({...geojson, codename: codename})
+                    } else {
+                        res.json({
+                            codename: codename,
+                            error: 4,
+                            message: 'no data or bad overpass response'
+                        })
+                    }
+                }).catch((err) => {
+                    console.log('error', err.message)
+                    res.json({codename: codename, error: 1, message: err.message})
+                })
+            }
+        }
+    } catch(err) {
+        //console.error(err)
+        res.json({error: 2})
+    }
 })
 
 app.post('/api/plantnet-identify', upload.single('image'), (req, res) => {
