@@ -1,23 +1,28 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import logo from '/osmtree.svg' // also favicon
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, Marker } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getServerUrl } from './utils'
 import { DataResponse } from './types'
+import { leafTypeStyles } from './consts'
+import { FeatureMarker } from './FeatureMarker'
+import SelectedFeatureContext from './SelectedFeatureContext'
 
-const MapTab = ({switchToAttributes}) => {
+const MapTab = () => {
+    const selectedFeature = useContext(SelectedFeatureContext)
+    const [loading, setLoading] = useState<boolean>(false)
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
-    
-    let previousBounds = ''
-    const markers: Record<string, Marker> = {} // osm id -> marker
-    // TODO: empty/unload markers when going far away
-    const [loading, setLoading] = useState<boolean>(false)
 
-    const lng = 5.04147
-    const lat = 47.32158
-    const zoom = 14
+    let previousBounds = ''
+    const featureMarkers: Record<string, FeatureMarker> = {} // osm id -> marker
+    let selectedMarker: FeatureMarker | null = null
+    // TODO: empty/unload markers when going far away
+
+    const lng = -1.374801
+    const lat = 47.05353
+    const zoom = 16
     const maxZoomToGetData = 16
 
     const orthoStyle: StyleSpecification = {
@@ -84,6 +89,8 @@ const MapTab = ({switchToAttributes}) => {
         if (map && map.current) {
             map.current.on('moveend', onMapMove)
             map.current.on('click', unselectFeature)
+            // init map data
+            onMapMove()
         }
     }
 
@@ -120,22 +127,30 @@ const MapTab = ({switchToAttributes}) => {
         console.log(`loadFeatures with ${features.length} features`)
         features.forEach((feature) => {
             if (feature.id && typeof feature.id === 'number') { // server must provide a feature.id with osm id
-                if (!(feature.id in markers)) {
+                if (!(feature.id in featureMarkers) && feature.properties) {
+                    const leafTypeStyle = leafTypeStyles[feature.properties.leaf_type ?? 'unknown']
                     const element = document.createElement('div')
                     element.className = 'feature-marker'
+                    element.style.cssText = `background-color: ${leafTypeStyle.color}`
                     const icon = document.createElement('img')
-                    icon.src = '/osmtree.svg'
-                    icon.style = 'width: 10px;'
+                    icon.src = leafTypeStyle.icon
+                    icon.style.cssText = 'width: 14px;'
                     element.appendChild(icon)
                     // add this feature as a marker
-                    const marker = new Marker({
+                    const featureMarker = new FeatureMarker(feature, {
                         element: element,
                         clickTolerance: 2
                     })
                     if (feature.geometry.type === 'Point' && map.current) {
-                        marker.setLngLat(feature.geometry.coordinates)
-                        marker.addTo(map.current)
-                        markers[feature.id] = marker
+                        featureMarker.setLngLat([feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
+                        featureMarker.addTo(map.current)
+
+                        element.addEventListener('click', (e) => {
+                            selectFeature(featureMarker)
+                            e.stopPropagation() // pour ne pas cliquer en plus sur la potentielle layer sous le marker
+                        })
+
+                        featureMarkers[feature.id] = featureMarker
                     }
                 }
             }
@@ -143,22 +158,33 @@ const MapTab = ({switchToAttributes}) => {
         setLoading(false)
     }
 
-    const unselectFeature = () => {
+    const selectFeature = (featureMarker: FeatureMarker) => {
+        unselectFeature()
+        selectedMarker = featureMarker
+        featureMarker.getElement().classList.add('feature-marker-selected')
+        selectedFeature.setValue(featureMarker.feature)
+    }
 
+    const unselectFeature = () => {
+        if (selectedMarker) {
+            selectedMarker.getElement().classList.remove('feature-marker-selected')
+            selectedFeature.setValue(null)
+            selectedMarker = null
+        }
     }
 
     const updateParams = () => {
         console.log('updateAppUrl')
     }
-
+    
+    //<button onClick={switchToAttributes}>Attributs</button>
     return (
         <div className="map" ref={mapContainer}>
             <a className="title">
                 <img src={logo} className="logo" alt="osmtree" />
-                osmtree
+                osmtree {selectedFeature.value && selectedFeature.value.id}
             </a>
             { loading && <div className='loading'>Loading</div> }
-            <button onClick={switchToAttributes}>Attributs</button>
         </div>
     )
 }

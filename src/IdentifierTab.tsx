@@ -69,13 +69,13 @@ const IdentifierTab = () => {
   }
 
   return (
-    <>
+    <div className='identifier_tab'>
       <IdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
 
       { isLoading && <div>Identification en cours...</div>}
 
       <CandidateChoice candidates={candidates} localizedSpeciesKey={localizedSpeciesKey} />
-    </>
+    </div>
   )
 }
 

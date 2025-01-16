@@ -1,3 +1,5 @@
+import { Feature, Marker, MarkerOptions } from "maplibre-gl"
+
 export type DataResponse = {
     codename?: string
     error?: number
@@ -34,4 +36,16 @@ export type PlantNetCandidate = {
 export type CandidateChoiceParams = {
     candidates: PlantNetCandidate[]
     localizedSpeciesKey: string
+}
+
+export type TreeMarkerStyle = {
+    icon: string
+    color: string
+}
+
+export type SelectedFeature = GeoJSON.Feature | null
+
+export type SelectedFeatureContextValue = {
+    value: SelectedFeature,
+    setValue: (value: SelectedFeature) => void
 }

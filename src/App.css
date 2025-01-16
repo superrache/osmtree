@@ -17,6 +17,14 @@ body {
     flex-direction: column;
 }
 
+.block {
+    display: block;
+}
+
+.hidden {
+    display: none;
+}
+
 .tab_content {
     position: absolute;
     left: 0;

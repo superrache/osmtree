@@ -9,7 +9,13 @@ import { json } from 'stream/consumers'
 
 const prod = (process.env.NODE_ENV === 'production')
 
-const instances = ['https://gall.openstreetmap.de', 'https://lambert.openstreetmap.de', 'https://lz4.overpass-api.de', 'https://z.overpass-api.de']
+const instances = [
+    'https://gall.openstreetmap.de',
+    'https://lambert.openstreetmap.de',
+    'https://lz4.overpass-api.de',
+    'https://z.overpass-api.de'
+]
+
 const simpleCache: Record<string, GeoJSON.FeatureCollection> = {} // request url -> feature collection result
 // TODO: count cache age and empty old cache
 
