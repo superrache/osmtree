@@ -49,3 +49,13 @@ export type SelectedFeatureContextValue = {
     value: SelectedFeature,
     setValue: (value: SelectedFeature) => void
 }
+
+export type OSMConnection = {
+    connected: boolean
+    userName: string
+}
+
+export type OSMConnectionContextValue = {
+    value: OSMConnection,
+    setValue: (value: OSMConnection) => void
+}

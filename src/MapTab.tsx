@@ -7,7 +7,7 @@ import { getBounds, getServerUrl } from './utils'
 import { DataResponse } from './types'
 import { leafTypeStyles } from './consts'
 import { FeatureMarker } from './FeatureMarker'
-import SelectedFeatureContext from './SelectedFeatureContext'
+import { SelectedFeatureContext } from './contexts'
 
 const MapTab = () => {
     const selectedFeature = useContext(SelectedFeatureContext)
