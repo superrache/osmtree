@@ -1,14 +1,43 @@
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 body {
     font-family: system-ui, -apple-system, sans-serif;
     height: 100vh;
     overflow: hidden;
 }
+
+a {
+    color: #FE7434;
+}
+
+a:hover {
+    color: white;
+    background-color: #FE7434;
+}
+
+button {
+    cursor: pointer;
+    font-size: 16px;
+    padding: 5px 10px;
+    color: white;
+    background-color: #555;
+    border: none;
+    border-radius: 5px;
+}
+
+button:hover:enabled {
+    background-color: #FE7434;
+    color: black;
+    outline: solid 1px white;
+}
+
+button:active {
+    background-color: #FF9454;
+}
+
+button:disabled {
+    background-color: #777;
+    color: #ccc;
+}
+  
 
 .app {
     height: 100vh;

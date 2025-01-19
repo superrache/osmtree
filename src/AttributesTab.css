@@ -3,3 +3,19 @@
     height: 100%;
     overflow-y: auto;
 }
+
+.attribute_unmodified {
+    background-color: #000;
+}
+
+.attribute_modified {
+    background-color: #555500;
+}
+
+.attribute_new {
+    background-color: #005500;
+}
+
+.attribute_deleted {
+    background-color: #550000;
+}

@@ -3,8 +3,8 @@ import logo from '/osmtree.svg' // also favicon
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds, getServerUrl } from './utils'
-import { DataResponse } from './types'
+import { getBounds, getServerUrl, initEditingProperties } from './utils'
+import { DataResponse, EditingProperties } from './types'
 import { leafTypeStyles } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { SelectedFeatureContext } from './contexts'
@@ -162,7 +162,11 @@ const MapTab = () => {
         unselectFeature()
         selectedMarker = featureMarker
         featureMarker.getElement().classList.add('feature-marker-selected')
-        selectedFeature.setValue(featureMarker.feature)
+
+        selectedFeature.setValue({
+            feature: featureMarker.feature,
+            editingProperties: initEditingProperties(featureMarker.feature)
+        })
     }
 
     const unselectFeature = () => {
@@ -173,18 +177,14 @@ const MapTab = () => {
         }
     }
 
-    const updateParams = () => {
-        console.log('updateAppUrl')
-    }
-    
-    //<button onClick={switchToAttributes}>Attributs</button>
     return (
         <div className="map" ref={mapContainer}>
             <a className="title">
                 <img src={logo} className="logo" alt="osmtree" />
-                osmtree {selectedFeature.value && selectedFeature.value.id}
+                osmtree {selectedFeature.value && selectedFeature.value.feature.id}
             </a>
             { loading && <div className='loading'>Loading</div> }
+            <button className="add-button">+</button>
         </div>
     )
 }

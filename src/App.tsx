@@ -8,7 +8,7 @@ import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
-import { OSMConnection, SelectedFeature } from "./types"
+import { EditingProperties, OSMConnection, SelectedFeature } from "./types"
 import { OSMConnectionContext, SelectedFeatureContext } from "./contexts"
 
 const App = () => {
@@ -23,6 +23,10 @@ const App = () => {
         { icon: uploadImg, label: 'Envoi OSM', content: <UploadTab></UploadTab> }
     ]
 
+    const setSelectedFeatureEditing = (feature: SelectedFeature) => {
+        setSelectedFeature(feature)
+    }
+
     return (
         <OSMConnectionContext.Provider value={{
             value: osmConnection,
@@ -30,7 +34,7 @@ const App = () => {
         }}>
             <SelectedFeatureContext.Provider value={{
                 value: selectedFeature,
-                setValue: setSelectedFeature
+                setValue: setSelectedFeatureEditing
             }}>
                 <div className="app">
                     <main className="tab_content">

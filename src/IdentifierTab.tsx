@@ -53,11 +53,11 @@ const IdentifierTab = () => {
           selected: false
         }
 
-          /* TODO: how to get these info from plantnet?
-          this.editedProperties['leaf_cycle'] = ''
-          this.editedProperties['leaf_type'] = ''*/
+        /* TODO: how to get these info from plantnet?
+        this.editedProperties['leaf_cycle'] = ''
+        this.editedProperties['leaf_type'] = ''*/
 
-          tmpCandidates.push(candidate)
+        tmpCandidates.push(candidate)
       }
       // apply candidates to CandidateChoice
       setCandidates(tmpCandidates)
@@ -74,7 +74,7 @@ const IdentifierTab = () => {
 
       { isLoading && <div>Identification en cours...</div>}
 
-      <CandidateChoice candidates={candidates} localizedSpeciesKey={localizedSpeciesKey} />
+      <CandidateChoice candidates={candidates} setCandidates={setCandidates} localizedSpeciesKey={localizedSpeciesKey} />
     </div>
   )
 }

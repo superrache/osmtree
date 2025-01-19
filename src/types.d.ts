@@ -35,6 +35,7 @@ export type PlantNetCandidate = {
 
 export type CandidateChoiceParams = {
     candidates: PlantNetCandidate[]
+    setCandidates: (candidates: PlantNetCandidate[]) => void
     localizedSpeciesKey: string
 }
 
@@ -43,7 +44,17 @@ export type TreeMarkerStyle = {
     color: string
 }
 
-export type SelectedFeature = GeoJSON.Feature | null
+export type SelectedFeature = {
+    feature: GeoJSON.Feature
+    editingProperties: EditingProperties
+} | null
+
+export type EditingProperty = {
+    tagValue: string
+    status: 'new' | 'deleted' | 'modified' | 'unmodified'
+}
+
+export type EditingProperties = {[key: string]: EditingProperty}
 
 export type SelectedFeatureContextValue = {
     value: SelectedFeature,

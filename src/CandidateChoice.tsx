@@ -1,21 +1,48 @@
 import { CandidateChoiceParams, PlantNetCandidate } from './types'
 import './CandidateChoice.css'
+import { useContext } from 'react'
+import { SelectedFeatureContext } from './contexts'
 
 
 
-const CandidateChoice = ({candidates, localizedSpeciesKey}: CandidateChoiceParams) => {
+const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey}: CandidateChoiceParams) => {
+  const selectedFeature = useContext(SelectedFeatureContext)
+  
   if (candidates.length === 0) {
     return null
   }
-  
+
   const onResultSelect = (e: any, index: number) => {
     console.log('onResultSelect', index)
+    const newCandidates: PlantNetCandidate[] = [] // for re-rendering
     candidates.forEach((candidate, idx) => {
       candidate.selected = (index === idx)
-      //if (candidate.selected) {
-        // TODO: set properties to osm feature
-      //}
+      newCandidates.push(candidate)
+      if (candidate.selected) {
+        // get the selected feature or create one
+        const feature = selectedFeature.value ?? {
+          id: -1,
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [0, 0]
+          },
+          properties: {
+            natural: 'tree'
+          }
+        }
+        // modify properties
+        if (feature.properties) {
+          if (candidate.localizedSpecies) feature.properties[localizedSpeciesKey] = candidate.localizedSpecies
+          if (candidate.genus) feature.properties['genus'] = candidate.genus
+          if (candidate.species) feature.properties['species'] = candidate.species
+        }
+
+        // set the value to update in every components
+        selectedFeature.setValue(feature)
+      }
     })
+    setCandidates(newCandidates)
   }
 
   return (

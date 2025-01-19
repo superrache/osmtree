@@ -1,8 +1,22 @@
+.pictures {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+  height: 50px;
+  margin: 20px;
+  position: relative;
+}
+
+.camera {
+  margin: 10px 0px;
+}
+
 #camera_input {
   display: none;
 }
 
-#camera_label {
+.camera_label {
   padding-left: 10px;
   padding-right: 10px;
   padding-bottom: 5px;
@@ -13,33 +27,24 @@
   border-radius: 5px;
 }
 
-#camera_label:hover {
+.camera_label:hover {
   background-color: #FE7434;
   color: black;
   outline: solid 1px white;
 }
 
-#camera_label:active {
+.camera_label:active {
   background-color: #FF9454;
 }
 
-.pictures {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  width: 100%;
-  height: 50px;
-  margin: 0px auto;
-  position: relative;
+.picture-preview {
+  margin: 0px 10px;
 }
 
 .organs {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
-  width: 100%;
-  height: 50px;
-  margin: 0px auto;
+  margin: 30px auto;
   position: relative;
 }
 

@@ -55,8 +55,8 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
   return (
     <>
       <div className="pictures">
-        <div>
-          <label id="camera_label" htmlFor='camera_input'>
+        <div className="camera">
+          <label className="camera_label" htmlFor='camera_input'>
             <img src={cameraImg} width='50' />
           </label>
           <input id="camera_input" type="file"
@@ -64,7 +64,7 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
                 capture="environment"
                 onChange={onFileInput} />
         </div>
-        {hasPreview() && <div>
+        {hasPreview() && <div className="picture-preview">
           <img src={picturePreview} height='70'/>
         </div>}
       </div>
