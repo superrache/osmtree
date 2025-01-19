@@ -1,4 +1,5 @@
 import { Feature, Marker, MarkerOptions } from "maplibre-gl"
+import { EditingProperties } from "./EditingProperties"
 
 export type DataResponse = {
     codename?: string
@@ -48,13 +49,6 @@ export type SelectedFeature = {
     feature: GeoJSON.Feature
     editingProperties: EditingProperties
 } | null
-
-export type EditingProperty = {
-    tagValue: string
-    status: 'new' | 'deleted' | 'modified' | 'unmodified'
-}
-
-export type EditingProperties = {[key: string]: EditingProperty}
 
 export type SelectedFeatureContextValue = {
     value: SelectedFeature,

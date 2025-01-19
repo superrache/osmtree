@@ -1,7 +1,6 @@
 .map {
-    position: absolute;
     width: 100%;
-    height: calc(100% - 64px); /* FIXME: redondant with tab_content css */
+    height: 100%;
     margin: 0;
     padding: 0;
 }

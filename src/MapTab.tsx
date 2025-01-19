@@ -3,11 +3,12 @@ import logo from '/osmtree.svg' // also favicon
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds, getServerUrl, initEditingProperties } from './utils'
-import { DataResponse, EditingProperties } from './types'
+import { getBounds, getServerUrl } from './utils'
+import { DataResponse } from './types'
 import { leafTypeStyles } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { SelectedFeatureContext } from './contexts'
+import { EditingProperties } from './EditingProperties'
 
 const MapTab = () => {
     const selectedFeature = useContext(SelectedFeatureContext)
@@ -165,7 +166,7 @@ const MapTab = () => {
 
         selectedFeature.setValue({
             feature: featureMarker.feature,
-            editingProperties: initEditingProperties(featureMarker.feature)
+            editingProperties: new EditingProperties(featureMarker.feature)
         })
     }
 

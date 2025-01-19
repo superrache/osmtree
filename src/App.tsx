@@ -8,7 +8,7 @@ import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
-import { EditingProperties, OSMConnection, SelectedFeature } from "./types"
+import { OSMConnection, SelectedFeature } from "./types"
 import { OSMConnectionContext, SelectedFeatureContext } from "./contexts"
 
 const App = () => {
