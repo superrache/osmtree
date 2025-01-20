@@ -14,6 +14,8 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
   const [cursor, setCursor] = useState(-1)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
+  console.log('init autocompleteinput', value, other)
+
   useEffect(() => {
     onValueChange(value, other, innerValue)
   }, [innerValue])

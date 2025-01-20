@@ -24,10 +24,11 @@ export class EditingProperties {
     deleteKey(key: string): void {
         for (const [index, prop] of this.props.entries()) {
             if (prop.key === key) {
-                if (prop.status in ['unmodified', 'modified']) {
-                    prop.status = 'deleted'
-                } else { // key was new
+                if (prop.status === 'new') {
                     this.props.splice(index, 1)
+                } else {
+                    // mark as deleted but keep in props list
+                    prop.status = 'deleted'
                 }
                 break    
             }
@@ -38,7 +39,7 @@ export class EditingProperties {
         for (const prop of this.props) {
             if (prop.key === key) {
                 prop.tag = tag
-                prop.status = 'modified'
+                prop.status = (prop.status === 'new' ? 'new' : 'modified')
                 return
             }
         }
@@ -48,7 +49,7 @@ export class EditingProperties {
         for (const prop of this.props) {
             if (prop.key === oldKey) {
                 prop.key = newKey
-                prop.status = 'modified'
+                prop.status = (prop.status === 'new' ? 'new' : 'modified')
                 return
             }
         }
@@ -56,5 +57,13 @@ export class EditingProperties {
 
     getProps(): EditingProperty[] {
         return this.props
+    }
+
+    createEmptyLineAtEnd() {
+        if (this.props[this.props.length - 1].key !== '') this.props.push({
+                key: '',
+                tag: '',
+                status: 'new'
+        })
     }
 }

@@ -2,7 +2,6 @@ import { useContext } from 'react'
 import './AttributesTab.css'
 import { OSMConnectionContext, SelectedFeatureContext } from './contexts'
 import AutocompleteInput from './AutocompleteInput'
-import { EditingProperties } from './EditingProperties'
 
 const AttributesTab = () => {
     const selectedFeature = useContext(SelectedFeatureContext)
@@ -11,13 +10,9 @@ const AttributesTab = () => {
     const tagInfoInstance = 'https://taginfo.openstreetmap.org'
 
     const onDeleteTag = (key: string) => {
-        if (selectedFeature.value && key !== '' && key in selectedFeature.value.editingProperties) { // don't delete new key/value ''/''
+        if (selectedFeature.value && key !== '') { // don't delete new key/value ''/''
             selectedFeature.value.editingProperties.deleteKey(key)
-            // rebuild a new feature object to get re-rendering
-            selectedFeature.setValue({
-                feature: selectedFeature.value!.feature,
-                editingProperties: selectedFeature.value.editingProperties
-            })
+            updateVueFromModel()
         }
     }
 
@@ -33,6 +28,7 @@ const AttributesTab = () => {
     }
 
     const onInputValue = async (searchTerm: string, key: string | null) => {
+        console.log('OnInputValue', searchTerm, key)
         const url = `${tagInfoInstance}/api/4/key/values?page=1&rp=10&sortname=count_all&sortorder=desc&key=${key}&query=${encodeURIComponent(searchTerm)}`
         const response = await fetch(url)
         const json = await response.json()
@@ -53,28 +49,31 @@ const AttributesTab = () => {
         console.log(`onInputChange ${isValue ? 'value' : 'key'} ${value} ${isValue ? other : ''} => ${newVal}`)
 
         let updateModel = false
-        const editingProperties: EditingProperties = selectedFeature.value.editingProperties
         if (isValue) { // update a tag value
             if (value !== newVal) { // value changed
                 // update the value
-                editingProperties.modifyValue(other, newVal)
+                selectedFeature.value.editingProperties.modifyValue(other, newVal)
                 // need update
                 updateModel = true
             }
         } else { // value is a key
-            if (value !== newVal && value in editingProperties) { // key changed
-                editingProperties.modifyKey(value, newVal)
+            if (value !== newVal) { // key changed
+                selectedFeature.value.editingProperties.modifyKey(value, newVal)
                 updateModel = true
             }
         }
         if (updateModel) {
+            updateVueFromModel()
+        }
+    }
+
+    const updateVueFromModel = () => {
+        if (selectedFeature.value) {
+            selectedFeature.value.editingProperties.createEmptyLineAtEnd()
             selectedFeature.setValue({
-                feature: selectedFeature.value!.feature,
-                editingProperties: selectedFeature.value.editingProperties
+                feature: selectedFeature.value.feature,
+                editingProperties: selectedFeature.value!.editingProperties
             })
-            // ajout d'une ligne vide à la fin si nécessaire
-            //let last = this.editedProperties[this.editedProperties.length - 1]
-            //if(last.key !== '' || last.value !== '') this.editedProperties.push({key: '', value: ''})
         }
     }
 
