@@ -22,12 +22,12 @@ const UploadTab = () => {
     return (
         <div className="upload_tab">
             <br/>
-            {!osmConnection.value.connected && <button onClick={() => onConnect()}>Se connecter à OpenStreetMap</button>}
+            {!osmConnection.value.connected && <button onClick={onConnect}>Se connecter à OpenStreetMap</button>}
             <br/>
             {osmConnection.value.connected && <div>
                 Bienvenue {osmConnection.value.userName}
                 <br/>
-                <button onClick={() => onDisconnect()}>Se déconnecter</button>
+                <button onClick={onDisconnect}>Se déconnecter</button>
                 <button>Envoyer à OpenStreetMap</button>
             </div>}
         </div>

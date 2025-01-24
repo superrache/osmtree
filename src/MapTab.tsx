@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import logo from '/osmtree.svg' // also favicon
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getServerUrl } from './utils'
@@ -11,10 +11,14 @@ import { SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 
 const MapTab = () => {
-    const selectedFeature = useContext(SelectedFeatureContext)
-    const [loading, setLoading] = useState<boolean>(false)
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
+    
+    const selectedFeature = useContext(SelectedFeatureContext)
+    
+    const [loading, setLoading] = useState<boolean>(false)
+    const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
+    const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
 
     let previousBounds = ''
     const featureMarkers: Record<string, FeatureMarker> = {} // osm id -> marker
@@ -178,6 +182,40 @@ const MapTab = () => {
         }
     }
 
+    const onAddButtonClick = () => {
+        unselectFeature()
+
+       setCreatingPosition(true)
+       zoomFocus(18, true)
+    }
+
+    const onCreatePositionCancel = () => {
+        setCreatingPosition(false)
+        zoomFocus(userZoom)
+    }
+
+    const onCreatePositionConfirm = () => {
+        setCreatingPosition(false)
+        zoomFocus(userZoom)
+
+        if (map.current) {
+            const newPositionMarker = new Marker().setLngLat(map.current.getCenter()).addTo(map.current)
+        }
+    }
+
+    const zoomFocus = (zoom: number, saveUserZoom: boolean = false) => {
+        if (map.current) {
+            if (saveUserZoom) {
+                setUserZoom(map.current.getZoom())
+                console.log(`previous zoom saved ${userZoom}`)
+            }
+            map.current.flyTo({
+                center: map.current.getCenter(),
+                zoom: zoom
+            })
+        }
+   }
+
     return (
         <div className="map" ref={mapContainer}>
             <a className="title">
@@ -185,7 +223,12 @@ const MapTab = () => {
                 osmtree {selectedFeature.value && selectedFeature.value.feature.id}
             </a>
             { loading && <div className='loading'>Loading</div> }
-            <button className="add-button">+</button>
+            { !creatingPosition && <div className="creating-position-buttons"><button className="add-button" onClick={onAddButtonClick}>+</button></div> }
+            { creatingPosition && <div className="creating-position-buttons">
+                <button className="add-button" onClick={onCreatePositionConfirm}>✓</button>
+                <button className="add-button" onClick={onCreatePositionCancel}>x</button>
+            </div>}
+            { creatingPosition && <div className="cross-marker">❌</div>}
         </div>
     )
 }
