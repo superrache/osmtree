@@ -1,5 +1,8 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import logo from '/osmtree.svg' // also favicon
+import confirmImg from './assets/confirm.svg'
+import cancelImg from './assets/cancel.svg'
+import crossImg from './assets/cross.svg'
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
@@ -223,12 +226,22 @@ const MapTab = () => {
                 osmtree {selectedFeature.value && selectedFeature.value.feature.id}
             </a>
             { loading && <div className='loading'>Loading</div> }
-            { !creatingPosition && <div className="creating-position-buttons"><button className="add-button" onClick={onAddButtonClick}>+</button></div> }
+            { !creatingPosition && <div className="creating-position-buttons">
+                <button className="creating-position-button" onClick={onAddButtonClick}>
+                    <img src={crossImg} width='50' />
+                </button>
+            </div> }
             { creatingPosition && <div className="creating-position-buttons">
-                <button className="add-button" onClick={onCreatePositionConfirm}>✓</button>
-                <button className="add-button" onClick={onCreatePositionCancel}>x</button>
+                <button className="creating-position-button" onClick={onCreatePositionConfirm}>
+                    <img src={confirmImg} width='50' />
+                </button>
+                <button className="creating-position-button" onClick={onCreatePositionCancel}>
+                    <img src={cancelImg} width='50' />
+                </button>
             </div>}
-            { creatingPosition && <div className="cross-marker">❌</div>}
+            { creatingPosition && <div className="cross-marker">
+                <img src={crossImg} width='30' />
+            </div>}
         </div>
     )
 }

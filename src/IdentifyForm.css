@@ -21,20 +21,6 @@
   padding-right: 10px;
   padding-bottom: 5px;
   padding-top: 45px;
-  cursor: pointer;
-  background-color: #555;
-  border: none;
-  border-radius: 5px;
-}
-
-.camera_label:hover {
-  background-color: #FE7434;
-  color: black;
-  outline: solid 1px white;
-}
-
-.camera_label:active {
-  background-color: #FF9454;
 }
 
 .picture-preview {

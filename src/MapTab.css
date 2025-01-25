@@ -10,7 +10,7 @@
     z-index: 500;
     top: 5px;
     left: 5px;
-    background-color: #333;
+    background-color: #353735;
     border-radius: 5px;
     padding-right: 15px;
     padding-bottom: 5px;
@@ -29,9 +29,10 @@
     z-index: 501;
     top: 25px;
     left: 50%;
-    background-color: black;
-    color:cadetblue;
+    background-color: #2e856f;
+    color: white;
     border-radius: 5px;
+    padding: 5px;
 }
 
 .feature-marker {
@@ -49,7 +50,7 @@
 }
 
 .feature-marker-selected {
-    outline: 4px solid #0ff;
+    outline: 8px solid #49d4b1;
 }
 
 .creating-position-buttons {
@@ -59,11 +60,9 @@
     z-index: 1000;
 }
 
-.add-button {
+.creating-position-button {
     border-radius: 60px;
-    font-size: 4em;
-    text-align: center;
-    padding: 0px 20px 10px 20px;
+    padding: 10px 10px 10px 10px;
 }
 
 .cross-marker {
@@ -71,4 +70,7 @@
     z-index: 1001;
     left: 50%;
     top: 50%;
+    text-align: center;
+    display: block;
+    margin: auto;
 }

@@ -5,12 +5,12 @@ body {
 }
 
 a {
-    color: #FE7434;
+    color: white;
 }
 
 a:hover {
-    color: white;
-    background-color: #FE7434;
+    color: black;
+    background-color: #49d4b1;
 }
 
 button {
@@ -18,20 +18,21 @@ button {
     font-size: 16px;
     padding: 5px 10px;
     color: white;
-    background-color: #555;
+    background-color: #1a4c40;
     border: none;
     border-radius: 5px;
     margin: 5px;
 }
 
 button:hover:enabled {
-    background-color: #FE7434;
+    background-color: #49d4b1;
     color: black;
     outline: solid 1px white;
 }
 
 button:active {
-    background-color: #FF9454;
+    background-color: #49d4b1;
+    color: black;
 }
 
 button:disabled {
@@ -64,7 +65,7 @@ button:disabled {
     overflow-y: auto;
     width: 100%;
     height: calc(100% - 64px);
-    background: #000;
+    background: #353735;
 }
 
 .tabs_bar {
@@ -96,7 +97,7 @@ button:disabled {
 }
 
 .tab_button {
-    background: #002200;
+    background: #353735;
     color: white;
     border: none;
     padding: 0.5rem 1rem;
@@ -106,5 +107,5 @@ button:disabled {
 }
 
 .tab_selected {
-    background-color: #006600;
+    background-color: #2e856f;
 }
