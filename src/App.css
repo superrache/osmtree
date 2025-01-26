@@ -10,7 +10,7 @@ a {
 
 a:hover {
     color: black;
-    background-color: #49d4b1;
+    background-color: #ff9454;
 }
 
 button {
@@ -25,13 +25,13 @@ button {
 }
 
 button:hover:enabled {
-    background-color: #49d4b1;
+    background-color: #ff9454;
     color: black;
     outline: solid 1px white;
 }
 
 button:active {
-    background-color: #49d4b1;
+    background-color: #ff9454;
     color: black;
 }
 
@@ -73,7 +73,7 @@ button:disabled {
     display: flex;
     width: 100%;
     border-top: 1px solid #555;
-    background: #000;
+    background: #353735;
     position: fixed;
     bottom: 0;
     left: 0;

@@ -223,7 +223,7 @@ const MapTab = () => {
         <div className="map" ref={mapContainer}>
             <a className="title">
                 <img src={logo} className="logo" alt="osmtree" />
-                osmtree {selectedFeature.value && selectedFeature.value.feature.id}
+                osmtree {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.id}
             </a>
             { loading && <div className='loading'>Loading</div> }
             { !creatingPosition && <div className="creating-position-buttons">

@@ -56,8 +56,10 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
     <>
       <div className="pictures">
         <div className="camera">
-          <button className="button camera_label" htmlFor='camera_input'>
-            <img src={cameraImg} width='50' />
+          <button>
+            <label className="button camera_label" htmlFor='camera_input'>
+              <img src={cameraImg} width='50' />
+            </label>
           </button>
           <input id="camera_input" type="file"
                 name="picture" accept='image/*'

@@ -80,7 +80,7 @@ const AttributesTab = () => {
     return (
         <div className="attributes_tab">
             <h2>Attributs</h2>
-            {!osmConnection.value.connected && selectedFeature.value !== null && selectedFeature.value.feature.properties && <div>
+            {!osmConnection.value.connected && selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties && <div>
                 <table>
                     <thead><tr><th>Clé</th><th>=</th><th>Valeur</th></tr></thead>
                     {Object.entries(selectedFeature.value.feature.properties).map(([key, value]) => (
@@ -98,7 +98,7 @@ const AttributesTab = () => {
             {osmConnection.value.connected && selectedFeature.value !== null && <div>
                 <table>
                     <thead><tr><th>Clé</th><th>=</th><th>Valeur</th></tr></thead>
-                    {selectedFeature.value.editingProperties.getProps().map((prop, index) => (
+                    {selectedFeature.value && selectedFeature.value.editingProperties.getProps().map((prop, index) => (
                         <tbody key={index}>
                             <tr className={`attribute_${prop.status}`}>
                                 <td><AutocompleteInput value={prop.key} other={null} suggestionsFunction={onInputKey} onValueChange={onInputChange}/></td>
