@@ -8,7 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getServerUrl } from './utils'
 import { DataResponse } from './types'
-import { leafTypeStyles } from './consts'
+import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
@@ -22,6 +22,7 @@ const MapTab = () => {
     const [loading, setLoading] = useState<boolean>(false)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
+    const [currentId, setCurrentId] = useState<number>(-1)
 
     let previousBounds = ''
     const featureMarkers: Record<string, FeatureMarker> = {} // osm id -> marker
@@ -135,13 +136,13 @@ const MapTab = () => {
         console.log(`loadFeatures with ${features.length} features`)
         features.forEach((feature) => {
             if (feature.id && typeof feature.id === 'number') { // server must provide a feature.id with osm id
-                if (!(feature.id in featureMarkers) && feature.properties) {
-                    const leafTypeStyle = leafTypeStyles[feature.properties.leaf_type ?? 'unknown']
+                if (!(feature.id in featureMarkers) && feature.properties && feature.properties.natural) {
+                    const naturalType = naturalTypes[feature.properties.natural]
                     const element = document.createElement('div')
                     element.className = 'feature-marker'
-                    element.style.cssText = `background-color: ${leafTypeStyle.color}`
+                    element.style.cssText = `background-color: ${naturalType.color}`
                     const icon = document.createElement('img')
-                    icon.src = leafTypeStyle.icon
+                    icon.src = naturalType.icon
                     icon.style.cssText = 'width: 14px;'
                     element.appendChild(icon)
                     // add this feature as a marker
@@ -202,7 +203,23 @@ const MapTab = () => {
         zoomFocus(userZoom)
 
         if (map.current) {
-            const newPositionMarker = new Marker().setLngLat(map.current.getCenter()).addTo(map.current)
+            const center = map.current.getCenter()
+            const feature: GeoJSON.Feature = {
+                id: currentId,
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [center.lng, center.lat]
+                },
+                properties: {natural: 'tree'}
+            }
+            loadFeatures([feature])
+            selectedFeature.setValue({
+                feature: feature,
+                editingProperties: new EditingProperties(feature)
+            })
+            // decrease current id
+            setCurrentId(currentId - 1)
         }
     }
 
@@ -211,6 +228,7 @@ const MapTab = () => {
             if (saveUserZoom) {
                 setUserZoom(map.current.getZoom())
                 console.log(`previous zoom saved ${userZoom}`)
+                if (map.current.getZoom() > zoom) return // don't zoom more than user zoom
             }
             map.current.flyTo({
                 center: map.current.getCenter(),
@@ -240,7 +258,7 @@ const MapTab = () => {
                 </button>
             </div>}
             { creatingPosition && <div className="cross-marker">
-                <img src={crossImg} width='30' />
+                <img src={crossImg} width='50' />
             </div>}
         </div>
     )

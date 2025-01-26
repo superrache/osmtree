@@ -98,7 +98,7 @@ app.get('/api/data', (req, res) => {
             const bounds = req.query.bounds
             console.log(`/api/data request on ${instance} for codename: ${req.query.codename} and bounds: ${bounds}`)
 
-            const filter = '["natural"~"shrub|tree"]'
+            const filter = '["natural"~"plant|shrub|tree"]'
             const query = `[out:json][timeout:25];(node${filter}(${bounds}););out body;>;out skel qt;`
 
             const fullUrl = `${instance}/api/interpreter?data=${encodeURIComponent(query)}`

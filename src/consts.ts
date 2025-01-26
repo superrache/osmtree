@@ -1,19 +1,28 @@
-import { TreeMarkerStyle } from "./types";
-import leafTypeBroadleavedIcon from './assets/leaf_type_broadleaved.svg'
-import leafTypeNeedleleavedIcon from './assets/leaf_type_needleleaved.svg'
-import leafTypeUnknownIcon from './assets/leaf_type_unknown.svg'
+import naturalTreeIcon from './assets/natural_tree.svg'
+import naturalShrubIcon from './assets/natural_shrub.svg'
+import naturalPlantIcon from './assets/natural_plant.svg'
+import { NaturalType } from './types'
 
-export const leafTypeStyles: Record<string, TreeMarkerStyle> = {
-    'broadleaved': {
-        icon: leafTypeBroadleavedIcon,
-        color: '#7cb26f'
+export const naturalTypes: Record<string, NaturalType> = {
+    'tree': {
+        tag: 'tree',
+        icon: naturalTreeIcon,
+        color: '#7cb26f',
+        label: 'Arbre',
+        selected: true,
     },
-    'needleleaved': {
-        icon: leafTypeNeedleleavedIcon,
-        color: '#2e856f'
+    'shrub': {
+        tag: 'shrub',
+        icon: naturalShrubIcon,
+        color: '#2e856f',
+        label: 'Arbuste',
+        selected: false
     },
-    'unknown': {
-        icon: leafTypeUnknownIcon,
-        color: '#d68940'
+    'plant': {
+        tag: 'plant',
+        icon: naturalPlantIcon,
+        color: '#7ce448',
+        label: 'Plante',
+        selected: false
     }
 }

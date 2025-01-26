@@ -6,16 +6,18 @@ import fruitImg from './assets/fruit.svg'
 import barkImg from './assets/bark.svg'
 import './IdentifyForm.css'
 import { IdentifyFormProps, IdentifyParams, Organ } from './types'
+import { naturalTypes } from './consts'
 
 const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
   const [organs, _] = useState<Organ[]>([
-    {id: 'leaf', selected: true, icon: leafImg },
-    {id: 'flower', selected: false, icon: flowerImg },
-    {id: 'fruit', selected: false, icon: fruitImg },
-    {id: 'bark', selected: false, icon: barkImg }
+    {id: 'leaf', selected: true, icon: leafImg, label: 'feuille'},
+    {id: 'flower', selected: false, icon: flowerImg, label: 'fleur'},
+    {id: 'fruit', selected: false, icon: fruitImg, label: 'fruit'},
+    {id: 'bark', selected: false, icon: barkImg, label: 'écorce'}
   ]) // useState because selected will be modified
 
   const [organ, setOrgan] = useState<string>(organs[0].id)
+  const [naturalType, setNaturalType] = useState<string>(naturalTypes.tree.tag)
   const [pictureFile, setPictureFile] = useState<File>()
   const [picturePreview, setPicturePreview] = useState<string>('')
 
@@ -32,10 +34,19 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
     return picturePreview.length > 0
   }
 
-  const onOrganSelect = (e: Object, id: string) => {
+  const onNaturalTypeSelect = (tag: string) => {
+    for (const naturalType of Object.values(naturalTypes)) {
+      naturalType.selected = (naturalType.tag === tag)
+      if (naturalType.tag === tag) {
+        setNaturalType(naturalType.tag)
+      }
+    }
+  }
+
+  const onOrganSelect = (id: string) => {
     for(const organ of organs) {
       organ.selected = (organ.id === id)
-      if(organ.id === id) {
+      if (organ.id === id) {
         console.log('select organ ' + organ.id)
         setOrgan(organ.id)
       }
@@ -54,6 +65,18 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
 
   return (
     <>
+      <div className="organs">
+        {Object.values(naturalTypes).map((naturalType) => {
+          return (
+            <div className="organ" key={naturalType.tag}
+              style={{opacity: naturalType.selected ? 1 : 0.5}}
+              onClick={() => onNaturalTypeSelect(naturalType.tag)}>
+              <img src={naturalType.icon} width='50' />
+              {naturalType.label}
+            </div>
+          )
+        })}
+      </div>
       <div className="pictures">
         <div className="camera">
           <button>
@@ -76,8 +99,9 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
           return (
             <div className="organ" key={organ.id}
                 style={{opacity: organ.selected ? 1 : 0.5}}
-                onClick={(e) => onOrganSelect(e, organ.id)}>
+                onClick={() => onOrganSelect(organ.id)}>
               <img src={organ.icon} width='50' />
+              {organ.label}
             </div>
           )
         })}

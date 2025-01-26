@@ -13,6 +13,7 @@ export type Organ = {
     id: string
     selected: boolean
     icon: string
+    label: string
   }
   
 export type IdentifyParams = {
@@ -40,9 +41,12 @@ export type CandidateChoiceParams = {
     localizedSpeciesKey: string
 }
 
-export type TreeMarkerStyle = {
+export type NaturalType = {
+    tag: string
     icon: string
     color: string
+    label: string
+    selected: boolean
 }
 
 export type SelectedFeature = {

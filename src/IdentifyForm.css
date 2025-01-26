@@ -30,7 +30,7 @@
 .organs {
   display: flex;
   justify-content: center;
-  margin: 20px auto;
+  margin: 15px auto 35px;
   position: relative;
 }
 

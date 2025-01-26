@@ -74,7 +74,10 @@ const IdentifierTab = () => {
 
       { isLoading && <div>Identification en cours...</div>}
 
-      <CandidateChoice candidates={candidates} setCandidates={setCandidates} localizedSpeciesKey={localizedSpeciesKey} />
+      <CandidateChoice
+        candidates={candidates}
+        setCandidates={setCandidates}
+        localizedSpeciesKey={localizedSpeciesKey} />
     </div>
   )
 }
