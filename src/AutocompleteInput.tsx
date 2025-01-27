@@ -14,7 +14,7 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
   const [cursor, setCursor] = useState(-1)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  console.log('init autocompleteinput', value, other)
+  // console.log('init autocompleteinput', value, other)
 
   useEffect(() => {
     onValueChange(value, other, innerValue)
@@ -25,7 +25,7 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
   }, [value])
 
   const onInput = async (val: string) => {
-    console.log('onInput', val, other)
+    // console.log('onInput', val, other)
     setInnerValue(val)
     const newSuggestions = await suggestionsFunction(innerValue, other)
     setSuggestions(newSuggestions)

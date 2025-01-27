@@ -15,6 +15,7 @@ const App = () => {
     const [activeTab, setActiveTab] = useState(0)
     const [selectedFeature, setSelectedFeature] = useState<SelectedFeature>(null)
     const [osmConnection, setOsmConnection] = useState<OSMConnection>({connected: false, userName: ''})
+    const [currentId, setCurrentId] = useState<number>(-1)
 
     const tabs = [
         { icon: mapImg, label: 'Carte', content: <MapTab></MapTab> },
@@ -34,7 +35,8 @@ const App = () => {
         }}>
             <SelectedFeatureContext.Provider value={{
                 value: selectedFeature,
-                setValue: setSelectedFeatureEditing
+                setValue: setSelectedFeatureEditing,
+                getNewId: () => {setCurrentId(currentId - 1); return currentId}
             }}>
                 <div className="app">
                     <main className="tab_content">

@@ -11,10 +11,12 @@ const IdentifierTab = () => {
   const [localizedSpeciesKey, setLocalizedSpeciesKey] = useState<string>('species:en')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [candidates, setCandidates] = useState<PlantNetCandidate[]>([])
+  const [naturalType, setNaturalType] = useState<string>('tree')
 
   const handleIdentify = async (params: IdentifyParams) => {
     setIsLoading(true)
     setCandidates([])
+    setNaturalType(params.naturalType)
     try {
       // save current language to save result in the good osm key
       const lang = 'fr' // TODO: get user lang
@@ -77,7 +79,8 @@ const IdentifierTab = () => {
       <CandidateChoice
         candidates={candidates}
         setCandidates={setCandidates}
-        localizedSpeciesKey={localizedSpeciesKey} />
+        localizedSpeciesKey={localizedSpeciesKey}
+        naturalType={naturalType} />
     </div>
   )
 }

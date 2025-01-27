@@ -1,23 +1,12 @@
 import { ChangeEvent,  useState } from 'react'
 import cameraImg from './assets/camera.svg'
-import leafImg from './assets/leaf.svg'
-import flowerImg from './assets/flower.svg'
-import fruitImg from './assets/fruit.svg'
-import barkImg from './assets/bark.svg'
 import './IdentifyForm.css'
-import { IdentifyFormProps, IdentifyParams, Organ } from './types'
-import { naturalTypes } from './consts'
+import { IdentifyFormProps, IdentifyParams } from './types'
+import { naturalTypes, organs } from './consts'
 
 const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
-  const [organs, _] = useState<Organ[]>([
-    {id: 'leaf', selected: true, icon: leafImg, label: 'feuille'},
-    {id: 'flower', selected: false, icon: flowerImg, label: 'fleur'},
-    {id: 'fruit', selected: false, icon: fruitImg, label: 'fruit'},
-    {id: 'bark', selected: false, icon: barkImg, label: 'écorce'}
-  ]) // useState because selected will be modified
-
-  const [organ, setOrgan] = useState<string>(organs[0].id)
-  const [naturalType, setNaturalType] = useState<string>(naturalTypes.tree.tag)
+  const [organ, setOrgan] = useState<string>('leaf')
+  const [naturalType, setNaturalType] = useState<string>('tree')
   const [pictureFile, setPictureFile] = useState<File>()
   const [picturePreview, setPicturePreview] = useState<string>('')
 
@@ -35,29 +24,32 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
   }
 
   const onNaturalTypeSelect = (tag: string) => {
-    for (const naturalType of Object.values(naturalTypes)) {
-      naturalType.selected = (naturalType.tag === tag)
-      if (naturalType.tag === tag) {
-        setNaturalType(naturalType.tag)
+    for (const [nid, naturalType] of Object.entries(naturalTypes)) {
+      naturalType.selected = (nid === tag)
+      if (nid === tag) {
+        setNaturalType(tag)
+        break
       }
     }
   }
 
   const onOrganSelect = (id: string) => {
-    for(const organ of organs) {
-      organ.selected = (organ.id === id)
-      if (organ.id === id) {
-        console.log('select organ ' + organ.id)
-        setOrgan(organ.id)
+    for(const [oid, organ] of Object.entries(organs)) {
+      organ.selected = (oid === id)
+      if (oid === id) {
+        console.log('select organ ' + oid)
+        setOrgan(oid)
+        break
       }
     }
   }
 
   const handleIdentify = () => {
-    if (pictureFile && organ) {
+    if (pictureFile) {
         const identifyParams: IdentifyParams = {
             pictureFile: pictureFile,
-            organ: organ
+            organ: organ,
+            naturalType: naturalType
         }
         onIdentify(identifyParams)
     }
@@ -66,11 +58,11 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
   return (
     <>
       <div className="organs">
-        {Object.values(naturalTypes).map((naturalType) => {
+        {Object.entries(naturalTypes).map(([tag, naturalType]) => {
           return (
-            <div className="organ" key={naturalType.tag}
+            <div className="organ" key={tag}
               style={{opacity: naturalType.selected ? 1 : 0.5}}
-              onClick={() => onNaturalTypeSelect(naturalType.tag)}>
+              onClick={() => onNaturalTypeSelect(tag)}>
               <img src={naturalType.icon} width='50' />
               {naturalType.label}
             </div>
@@ -95,11 +87,11 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
       </div>
 
       <div className="organs">
-        {organs.map((organ) => {
+        {Object.entries(organs).map(([oid, organ]) => {
           return (
-            <div className="organ" key={organ.id}
+            <div className="organ" key={oid}
                 style={{opacity: organ.selected ? 1 : 0.5}}
-                onClick={() => onOrganSelect(organ.id)}>
+                onClick={() => onOrganSelect(oid)}>
               <img src={organ.icon} width='50' />
               {organ.label}
             </div>

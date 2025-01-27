@@ -3,7 +3,7 @@ import logo from '/osmtree.svg' // also favicon
 import confirmImg from './assets/confirm.svg'
 import cancelImg from './assets/cancel.svg'
 import crossImg from './assets/cross.svg'
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, Marker } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getServerUrl } from './utils'
@@ -16,17 +16,15 @@ import { EditingProperties } from './EditingProperties'
 const MapTab = () => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
-    
+
     const selectedFeature = useContext(SelectedFeatureContext)
-    
+
     const [loading, setLoading] = useState<boolean>(false)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
-    const [currentId, setCurrentId] = useState<number>(-1)
 
     let previousBounds = ''
     const featureMarkers: Record<string, FeatureMarker> = {} // osm id -> marker
-    let selectedMarker: FeatureMarker | null = null
     // TODO: empty/unload markers when going far away
 
     const lng = -1.374801
@@ -169,20 +167,18 @@ const MapTab = () => {
 
     const selectFeature = (featureMarker: FeatureMarker) => {
         unselectFeature()
-        selectedMarker = featureMarker
         featureMarker.getElement().classList.add('feature-marker-selected')
-
         selectedFeature.setValue({
             feature: featureMarker.feature,
+            marker: featureMarker,
             editingProperties: new EditingProperties(featureMarker.feature)
         })
     }
 
     const unselectFeature = () => {
-        if (selectedMarker) {
-            selectedMarker.getElement().classList.remove('feature-marker-selected')
+        if (selectedFeature.value !== null) {
+            if (selectedFeature.value.marker !== null) selectedFeature.value.marker.getElement().classList.remove('feature-marker-selected')
             selectedFeature.setValue(null)
-            selectedMarker = null
         }
     }
 
@@ -205,7 +201,7 @@ const MapTab = () => {
         if (map.current) {
             const center = map.current.getCenter()
             const feature: GeoJSON.Feature = {
-                id: currentId,
+                id: selectedFeature.getNewId(),
                 type: 'Feature',
                 geometry: {
                     type: 'Point',
@@ -216,10 +212,9 @@ const MapTab = () => {
             loadFeatures([feature])
             selectedFeature.setValue({
                 feature: feature,
+                marker: featureMarkers[feature.id!],
                 editingProperties: new EditingProperties(feature)
             })
-            // decrease current id
-            setCurrentId(currentId - 1)
         }
     }
 

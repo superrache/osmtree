@@ -1,5 +1,6 @@
-import { Feature, Marker, MarkerOptions } from "maplibre-gl"
+import { Feature } from "maplibre-gl"
 import { EditingProperties } from "./EditingProperties"
+import { FeatureMarker } from "./FeatureMarker"
 
 export type DataResponse = {
     codename?: string
@@ -10,7 +11,6 @@ export type DataResponse = {
 }
 
 export type Organ = {
-    id: string
     selected: boolean
     icon: string
     label: string
@@ -19,6 +19,7 @@ export type Organ = {
 export type IdentifyParams = {
     pictureFile: File
     organ: string
+    naturalType: string
 }
 
 export type IdentifyFormProps = {
@@ -39,10 +40,10 @@ export type CandidateChoiceParams = {
     candidates: PlantNetCandidate[]
     setCandidates: (candidates: PlantNetCandidate[]) => void
     localizedSpeciesKey: string
+    naturalType: string
 }
 
 export type NaturalType = {
-    tag: string
     icon: string
     color: string
     label: string
@@ -51,12 +52,14 @@ export type NaturalType = {
 
 export type SelectedFeature = {
     feature: GeoJSON.Feature
+    marker: FeatureMarker | null
     editingProperties: EditingProperties
 } | null
 
 export type SelectedFeatureContextValue = {
     value: SelectedFeature,
     setValue: (value: SelectedFeature) => void
+    getNewId: () => number
 }
 
 export type OSMConnection = {

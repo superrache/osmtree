@@ -3,6 +3,9 @@ import './AttributesTab.css'
 import { OSMConnectionContext, SelectedFeatureContext } from './contexts'
 import AutocompleteInput from './AutocompleteInput'
 
+// FIXME: bug: create an existing key with the last line
+// FIXME: bug: delete a key then recreate it with the last line
+
 const AttributesTab = () => {
     const selectedFeature = useContext(SelectedFeatureContext)
     const osmConnection = useContext(OSMConnectionContext)
@@ -28,7 +31,7 @@ const AttributesTab = () => {
     }
 
     const onInputValue = async (searchTerm: string, key: string | null) => {
-        console.log('OnInputValue', searchTerm, key)
+        // console.log('OnInputValue', searchTerm, key)
         const url = `${tagInfoInstance}/api/4/key/values?page=1&rp=10&sortname=count_all&sortorder=desc&key=${key}&query=${encodeURIComponent(searchTerm)}`
         const response = await fetch(url)
         const json = await response.json()
@@ -46,7 +49,7 @@ const AttributesTab = () => {
 
         const isValue = other !== null // else is key
 
-        console.log(`onInputChange ${isValue ? 'value' : 'key'} ${value} ${isValue ? other : ''} => ${newVal}`)
+        // console.log(`onInputChange ${isValue ? 'value' : 'key'} ${value} ${isValue ? other : ''} => ${newVal}`)
 
         let updateModel = false
         if (isValue) { // update a tag value
@@ -69,12 +72,16 @@ const AttributesTab = () => {
 
     const updateVueFromModel = () => {
         if (selectedFeature.value) {
-            selectedFeature.value.editingProperties.createEmptyLineAtEnd()
             selectedFeature.setValue({
                 feature: selectedFeature.value.feature,
+                marker: selectedFeature.value.marker,
                 editingProperties: selectedFeature.value!.editingProperties
             })
         }
+    }
+
+    const onLocate = () => {
+
     }
 
     return (
@@ -109,6 +116,7 @@ const AttributesTab = () => {
                         </tbody>
                     ))}
                 </table>
+                {selectedFeature.value.marker === null && <div>Cet élément n'a pas de position géographique. <button onClick={onLocate}>Positionner</button></div>}
                 <div className="buttons">
                     <button>Valider</button>
                     <button>Annuler</button>

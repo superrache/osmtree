@@ -3,7 +3,8 @@ import { OSMConnection, OSMConnectionContextValue, SelectedFeature, SelectedFeat
 
 export const SelectedFeatureContext = createContext<SelectedFeatureContextValue>({
     value: null,
-    setValue: (_: SelectedFeature) => {}
+    setValue: (_: SelectedFeature) => {},
+    getNewId: () => 0
 })
 
 export const OSMConnectionContext = createContext<OSMConnectionContextValue>({

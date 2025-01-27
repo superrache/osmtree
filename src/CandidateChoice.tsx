@@ -1,43 +1,53 @@
-import { CandidateChoiceParams, PlantNetCandidate } from './types'
+import { CandidateChoiceParams, PlantNetCandidate, SelectedFeature } from './types'
 import './CandidateChoice.css'
 import { useContext } from 'react'
 import { SelectedFeatureContext } from './contexts'
+import { EditingProperties } from './EditingProperties'
 
-
-
-const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey}: CandidateChoiceParams) => {
+const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, naturalType}: CandidateChoiceParams) => {
   const selectedFeature = useContext(SelectedFeatureContext)
   
   if (candidates.length === 0) {
     return null
   }
 
-  const onResultSelect = (e: any, index: number) => {
-    console.log('onResultSelect', index)
+  const getOrCreateSelectedFeature = () => {
+    if (selectedFeature.value) return selectedFeature.value
+
+    const newFeature: GeoJSON.Feature = {
+      id: selectedFeature.getNewId(),
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [0, 0]
+      },
+      properties: {
+        natural: naturalType
+      }  
+    }
+    const newEditingProperties = new EditingProperties(newFeature)
+    return {
+      feature: newFeature,
+      marker: null,
+      editingProperties: newEditingProperties
+    }
+  }
+
+  const onResultSelect = (index: number) => {
+    // console.log('onResultSelect', index)
     const newCandidates: PlantNetCandidate[] = [] // for re-rendering
     candidates.forEach((candidate, idx) => {
       candidate.selected = (index === idx)
       newCandidates.push(candidate)
       if (candidate.selected) {
         // get the selected feature or create one
-        const feature = selectedFeature.value ?? {
-          id: -1,
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [0, 0]
-          },
-          properties: {
-            natural: 'tree'
-          }
-        }
+        const feature = getOrCreateSelectedFeature()
         // modify properties
-        if (feature.properties) {
-          if (candidate.localizedSpecies) feature.properties[localizedSpeciesKey] = candidate.localizedSpecies
-          if (candidate.genus) feature.properties['genus'] = candidate.genus
-          if (candidate.species) feature.properties['species'] = candidate.species
-        }
-
+        feature.editingProperties.modifyValue('natural', naturalType)
+        if (candidate.localizedSpecies) feature.editingProperties.modifyValue(localizedSpeciesKey, candidate.localizedSpecies)
+        if (candidate.genus) feature.editingProperties.modifyValue('genus', candidate.genus)
+        if (candidate.species) feature.editingProperties.modifyValue('species', candidate.species)
+      
         // set the value to update in every components
         selectedFeature.setValue(feature)
       }
@@ -50,7 +60,7 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey}: Candi
       {candidates.map((candidate, index) => (
         <div className={`result ${candidate.selected ? 'result_selected' : ''}`}
           key={index}
-          onClick={(e) => onResultSelect(e, index)}>
+          onClick={() => onResultSelect(index)}>
           <img className="result-image" v-if="result.imageUrl !== ''" src={candidate.imageUrl}/>
           <div className="result-info">
             <div className="result-label-title">{ `${localizedSpeciesKey}=${candidate.localizedSpecies}` }</div>

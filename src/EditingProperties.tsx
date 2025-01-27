@@ -33,6 +33,7 @@ export class EditingProperties {
                 break    
             }
         }
+        this.__createEmptyLineAtEnd()
     }
 
     modifyValue(key: string, tag: string): void {
@@ -43,6 +44,14 @@ export class EditingProperties {
                 return
             }
         }
+        // the key doesn't exist yet
+        // overwrite the last empty line with this key/value new pair
+        this.props[this.props.length - 1] = {
+            key: key,
+            tag: tag,
+            status: 'new'
+        }
+        this.__createEmptyLineAtEnd()
     }
 
     modifyKey(oldKey: string, newKey: string): void {
@@ -59,11 +68,14 @@ export class EditingProperties {
         return this.props
     }
 
-    createEmptyLineAtEnd() {
-        if (this.props[this.props.length - 1].key !== '') this.props.push({
+    __createEmptyLineAtEnd() {
+        if (this.props[this.props.length - 1].key !== '') {
+            // create an empty line at the end
+            this.props.push({
                 key: '',
                 tag: '',
                 status: 'new'
-        })
+            })
+        }
     }
 }
