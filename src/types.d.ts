@@ -1,6 +1,7 @@
 import { Feature } from "maplibre-gl"
 import { EditingProperties } from "./EditingProperties"
 import { FeatureMarker } from "./FeatureMarker"
+import { Ref } from "react"
 
 export type DataResponse = {
     codename?: string
@@ -41,6 +42,14 @@ export type CandidateChoiceParams = {
     setCandidates: (candidates: PlantNetCandidate[]) => void
     localizedSpeciesKey: string
     naturalType: string
+}
+
+export type AttributesTabParams = {
+    onLocateFeature: () => void
+}
+
+export type MapTabParams = {
+    mapTabRef: React.MutableRefObject<(() => void) | undefined>
 }
 
 export type NaturalType = {

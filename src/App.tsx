@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import './App.css'
 import mapImg from './assets/map.svg'
 import attributesImg from './assets/attributes.svg'
@@ -17,9 +17,20 @@ const App = () => {
     const [osmConnection, setOsmConnection] = useState<OSMConnection>({connected: false, userName: ''})
     const [currentId, setCurrentId] = useState<number>(-1)
 
+    const mapTabRef = useRef<() => void>()
+
+    const handleOnLocateFeature = () => {
+        setActiveTab(0)
+        setTimeout(() => {
+            if (typeof mapTabRef.current === 'function') {
+                mapTabRef.current()
+            }
+          }, 0)
+    }
+
     const tabs = [
-        { icon: mapImg, label: 'Carte', content: <MapTab></MapTab> },
-        { icon: attributesImg, label: 'Attributs', content: <AttributesTab></AttributesTab> },
+        { icon: mapImg, label: 'Carte', content: <MapTab mapTabRef={mapTabRef}></MapTab> },
+        { icon: attributesImg, label: 'Attributs', content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
         { icon: identifyImg, label: 'Identifier', content: <IdentifierTab></IdentifierTab> },
         { icon: uploadImg, label: 'Envoi OSM', content: <UploadTab></UploadTab> }
     ]
@@ -64,6 +75,7 @@ const App = () => {
                 </div>
             </SelectedFeatureContext.Provider>
         </OSMConnectionContext.Provider>
+
     )
 }
 

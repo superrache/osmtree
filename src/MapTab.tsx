@@ -7,13 +7,13 @@ import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateCont
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getServerUrl } from './utils'
-import { DataResponse } from './types'
+import { DataResponse, MapTabParams } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 
-const MapTab = () => {
+const MapTab = ({mapTabRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
 
@@ -21,6 +21,7 @@ const MapTab = () => {
 
     const [loading, setLoading] = useState<boolean>(false)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
+    const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
 
     let previousBounds = ''
@@ -106,7 +107,6 @@ const MapTab = () => {
         if (map && map.current && map.current.getZoom() >= maxZoomToGetData) {
             const bounds = getBounds(map.current)
             if (bounds !== previousBounds) {
-                console.log(bounds)
                 previousBounds = bounds
                 await reload()
             }
@@ -132,7 +132,8 @@ const MapTab = () => {
 
     const loadFeatures = (features: GeoJSON.Feature[]) => {
         console.log(`loadFeatures with ${features.length} features`)
-        features.forEach((feature) => {
+        let lastMarker: FeatureMarker | null = null
+        for (const feature of features) {
             if (feature.id && typeof feature.id === 'number') { // server must provide a feature.id with osm id
                 if (!(feature.id in featureMarkers) && feature.properties && feature.properties.natural) {
                     const naturalType = naturalTypes[feature.properties.natural]
@@ -153,40 +154,44 @@ const MapTab = () => {
                         featureMarker.addTo(map.current)
 
                         element.addEventListener('click', (e) => {
-                            selectFeature(featureMarker)
+                            selectFeature(featureMarker, undefined)
                             e.stopPropagation() // pour ne pas cliquer en plus sur la potentielle layer sous le marker
                         })
-
                         featureMarkers[feature.id] = featureMarker
+                        lastMarker = featureMarker
                     }
                 }
             }
-        })
+        }
         setLoading(false)
+        return lastMarker
     }
 
-    const selectFeature = (featureMarker: FeatureMarker) => {
-        unselectFeature()
+    const selectFeature = (featureMarker: FeatureMarker, editingProperties: EditingProperties | undefined) => {
+        console.log('selectFeature', featureMarker, editingProperties)
+        if (editingProperties === undefined) unselectFeature()
         featureMarker.getElement().classList.add('feature-marker-selected')
         selectedFeature.setValue({
             feature: featureMarker.feature,
             marker: featureMarker,
-            editingProperties: new EditingProperties(featureMarker.feature)
+            editingProperties: editingProperties ?? new EditingProperties(featureMarker.feature)
         })
     }
 
     const unselectFeature = () => {
+        console.log('unselectFeature', selectedFeature.value, selectedFeature.value?.marker)
         if (selectedFeature.value !== null) {
             if (selectedFeature.value.marker !== null) selectedFeature.value.marker.getElement().classList.remove('feature-marker-selected')
+            console.log('selectedFeature.setValue(null)')
             selectedFeature.setValue(null)
         }
     }
 
     const onAddButtonClick = () => {
         unselectFeature()
-
-       setCreatingPosition(true)
-       zoomFocus(18, true)
+        setCreatingPosition(true)
+        setLocateSelectedFeature(false)
+        zoomFocus(18, true)
     }
 
     const onCreatePositionCancel = () => {
@@ -200,21 +205,29 @@ const MapTab = () => {
 
         if (map.current) {
             const center = map.current.getCenter()
-            const feature: GeoJSON.Feature = {
-                id: selectedFeature.getNewId(),
-                type: 'Feature',
-                geometry: {
-                    type: 'Point',
-                    coordinates: [center.lng, center.lat]
-                },
-                properties: {natural: 'tree'}
+            const pointGeom: GeoJSON.Point = {
+                type: 'Point',
+                coordinates: [center.lng, center.lat]
             }
-            loadFeatures([feature])
-            selectedFeature.setValue({
-                feature: feature,
-                marker: featureMarkers[feature.id!],
-                editingProperties: new EditingProperties(feature)
-            })
+
+            if (locateSelectedFeature && selectedFeature.value !== null) {
+                // locate the current selected feature
+                const feature = selectedFeature.value.feature
+                feature.geometry = pointGeom
+                // conserve current editing properties
+                const editingProperties = selectedFeature.value.editingProperties
+                const featureMarker = loadFeatures([feature])
+                if (featureMarker) selectFeature(featureMarker, editingProperties)
+            } else { // create a new feature and select it
+                const feature: GeoJSON.Feature = {
+                    id: selectedFeature.getNewId(),
+                    type: 'Feature',
+                    geometry: pointGeom,
+                    properties: {natural: 'tree'}
+                }
+                const featureMarker = loadFeatures([feature])
+                if (featureMarker) selectFeature(featureMarker, undefined)
+            }
         }
     }
 
@@ -230,7 +243,17 @@ const MapTab = () => {
                 zoom: zoom
             })
         }
-   }
+    }
+
+    const onLocateFeature = () => {
+        setCreatingPosition(true)
+        setLocateSelectedFeature(true)
+        zoomFocus(18, true)
+    }
+
+    if (mapTabRef) {
+        mapTabRef.current = onLocateFeature
+    }
 
     return (
         <div className="map" ref={mapContainer}>

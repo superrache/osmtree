@@ -2,7 +2,6 @@ import { Map } from "maplibre-gl"
 
 export const getServerUrl = () => {
     const url = window.location.origin
-    console.log(url)
     if(url.indexOf('onrender.com') > 0) {
         return url
     } else {

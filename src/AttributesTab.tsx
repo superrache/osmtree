@@ -2,11 +2,12 @@ import { useContext } from 'react'
 import './AttributesTab.css'
 import { OSMConnectionContext, SelectedFeatureContext } from './contexts'
 import AutocompleteInput from './AutocompleteInput'
+import { AttributesTabParams } from './types'
 
 // FIXME: bug: create an existing key with the last line
 // FIXME: bug: delete a key then recreate it with the last line
 
-const AttributesTab = () => {
+const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
     const selectedFeature = useContext(SelectedFeatureContext)
     const osmConnection = useContext(OSMConnectionContext)
 
@@ -80,10 +81,6 @@ const AttributesTab = () => {
         }
     }
 
-    const onLocate = () => {
-
-    }
-
     return (
         <div className="attributes_tab">
             <h2>Attributs</h2>
@@ -116,7 +113,7 @@ const AttributesTab = () => {
                         </tbody>
                     ))}
                 </table>
-                {selectedFeature.value.marker === null && <div>Cet élément n'a pas de position géographique. <button onClick={onLocate}>Positionner</button></div>}
+                {selectedFeature.value.marker === null && <div>Cet élément n'a pas de position géographique. <button onClick={onLocateFeature}>Positionner</button></div>}
                 <div className="buttons">
                     <button>Valider</button>
                     <button>Annuler</button>
