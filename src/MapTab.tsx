@@ -10,7 +10,7 @@ import { getBounds, getServerUrl } from './utils'
 import { DataResponse, MapTabParams } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
-import { SelectedFeatureContext } from './contexts'
+import { MapContext, SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 
 const MapTab = ({mapTabRef}: MapTabParams) => {
@@ -18,13 +18,13 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const map = useRef<Map | null>(null)
 
     const selectedFeature = useContext(SelectedFeatureContext)
+    const mapContext = useContext(MapContext)
 
     const [loading, setLoading] = useState<boolean>(false)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
 
-    let previousBounds = ''
     const featureMarkers: Record<string, FeatureMarker> = {} // osm id -> marker
     // TODO: empty/unload markers when going far away
 
@@ -93,7 +93,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     }, [lng, lat, zoom])
 
     const onMapLoad = () => {
-        console.log('onMapLoad')
+        //console.log('onMapLoad')
         if (map && map.current) {
             map.current.on('moveend', onMapMove)
             map.current.on('click', unselectFeature)
@@ -103,23 +103,25 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     }
 
     const onMapMove = async () => {
-        console.log('onMapMove')
+        //console.log('onMapMove')
         if (map && map.current && map.current.getZoom() >= maxZoomToGetData) {
             const bounds = getBounds(map.current)
-            if (bounds !== previousBounds) {
-                previousBounds = bounds
-                await reload()
+            const mapEl = document.getElementById('map')
+            const mapIsVisible = mapEl && mapEl.clientHeight > 0
+            if (bounds !== mapContext.bounds && mapIsVisible) {
+                mapContext.setBounds(bounds) // update map context
+                await reload(bounds)
             }
         }
     }
 
-    const reload = async () => {
+    const reload = async (bounds: string) => {
         setLoading(true)
 
         const codename = btoa(Math.random().toString()).substring(10, 5)
         console.log(`reload ${codename}`)
 
-        const response = await fetch(`${getServerUrl()}/api/data?bounds=${previousBounds}&codename=${codename}`)
+        const response = await fetch(`${getServerUrl()}/api/data?bounds=${bounds}&codename=${codename}`)
         const data: DataResponse = await response.json()
         if (data.error) {
             console.log(`${codename}: query error ${data.error}`)
@@ -256,7 +258,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     }
 
     return (
-        <div className="map" ref={mapContainer}>
+        <div id="map" className="map" ref={mapContainer}>
             <a className="title">
                 <img src={logo} className="logo" alt="osmtree" />
                 osmtree {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.id}

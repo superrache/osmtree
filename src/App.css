@@ -107,7 +107,7 @@ button:disabled {
 }
 
 .tab_selected {
-    background-color: #ff9454aa;
+    background-color: #c0cdc0;
     color: black;
     font-weight: 600;
 }

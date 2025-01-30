@@ -66,9 +66,14 @@ export type SelectedFeature = {
 } | null
 
 export type SelectedFeatureContextValue = {
-    value: SelectedFeature,
+    value: SelectedFeature
     setValue: (value: SelectedFeature) => void
     getNewId: () => number
+}
+
+export type MapContextValue = {
+    bounds: string
+    setBounds: (bounds: string) => void
 }
 
 export type OSMConnection = {
