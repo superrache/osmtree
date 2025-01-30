@@ -9,11 +9,13 @@ import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
 import { OSMConnection, SelectedFeature } from "./types"
-import { MapContext, OSMConnectionContext, SelectedFeatureContext } from "./contexts"
+import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext } from "./contexts"
+import { FeatureMarker } from "./FeatureMarker"
 
 const App = () => {
     const [activeTab, setActiveTab] = useState(0)
     const [selectedFeature, setSelectedFeature] = useState<SelectedFeature>(null)
+    const [featureMarkers, setFeatureMarkers] = useState<Record<string, FeatureMarker>>({})
     const [mapBounds, setMapBounds] = useState<string>('0,0,0,0')
     const [osmConnection, setOsmConnection] = useState<OSMConnection>({connected: false, userName: ''})
     const [currentId, setCurrentId] = useState<number>(-1)
@@ -54,35 +56,40 @@ const App = () => {
                 setValue: setSelectedFeature,
                 getNewId: () => {setCurrentId(currentId - 1); return currentId}
             }}>
-                <MapContext.Provider value={{
-                    bounds: mapBounds,
-                    setBounds: setMapBounds
+                <FeatureMarkersContext.Provider value={{
+                    value: featureMarkers,
+                    setValue: setFeatureMarkers
                 }}>
-                    <div className="app">
-                        <main className="tab_content">
-                            {tabs.map((tab, index) => (
-                                <div
-                                key={index}
-                                className={`${activeTab === index ? 'block' : 'hidden'}`}
-                            >
-                                {tab.content}
-                            </div>
-                            ))}
-                        </main>
-                        <nav className="tabs_bar">
-                            {tabs.map((tab, index) => {
-                                return (
-                                    <label key={index}
-                                        onClick={() => setActiveTab(index)}
-                                        className={`tab_button ${activeTab === index ? 'tab_selected' : ''}`}>
-                                        <img src={tab.icon} width='50' />
-                                        {tab.label}
-                                    </label>
-                                )
-                            })}
-                        </nav>
-                    </div>
-                </MapContext.Provider>
+                    <MapContext.Provider value={{
+                        bounds: mapBounds,
+                        setBounds: setMapBounds
+                    }}>
+                        <div className="app">
+                            <main className="tab_content">
+                                {tabs.map((tab, index) => (
+                                    <div
+                                    key={index}
+                                    className={`${activeTab === index ? 'block' : 'hidden'}`}
+                                >
+                                    {tab.content}
+                                </div>
+                                ))}
+                            </main>
+                            <nav className="tabs_bar">
+                                {tabs.map((tab, index) => {
+                                    return (
+                                        <label key={index}
+                                            onClick={() => setActiveTab(index)}
+                                            className={`tab_button ${activeTab === index ? 'tab_selected' : ''}`}>
+                                            <img src={tab.icon} width='50' />
+                                            {tab.label}
+                                        </label>
+                                    )
+                                })}
+                            </nav>
+                        </div>
+                    </MapContext.Provider>
+                </FeatureMarkersContext.Provider>
             </SelectedFeatureContext.Provider>
         </OSMConnectionContext.Provider>
 

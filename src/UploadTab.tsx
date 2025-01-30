@@ -19,8 +19,6 @@ const UploadTab = () => {
         })
     }
 
-    // TODO: fill survey:date property
-
     return (
         <div className="upload_tab">
             <br/>

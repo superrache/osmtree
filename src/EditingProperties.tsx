@@ -39,8 +39,9 @@ export class EditingProperties {
     modifyValue(key: string, tag: string): void {
         for (const prop of this.props) {
             if (prop.key === key) {
+                const status = prop.status === 'new' ? 'new' : (tag !== prop.tag ? 'modified' : 'unmodified')
                 prop.tag = tag
-                prop.status = (prop.status === 'new' ? 'new' : 'modified')
+                prop.status = status
                 return
             }
         }
@@ -59,9 +60,18 @@ export class EditingProperties {
             if (prop.key === oldKey) {
                 prop.key = newKey
                 prop.status = (prop.status === 'new' ? 'new' : 'modified')
+                this.__createEmptyLineAtEnd()
                 return
             }
         }
+        // the key doesn't exist yet
+        // overwrite the last empty line with this key/value new pair
+        this.props[this.props.length - 1] = {
+            key: newKey,
+            tag: '',
+            status: 'new'
+        }
+        this.__createEmptyLineAtEnd()
     }
 
     getProps(): EditingProperty[] {

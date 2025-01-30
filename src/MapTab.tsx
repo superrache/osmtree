@@ -10,7 +10,7 @@ import { getBounds, getServerUrl } from './utils'
 import { DataResponse, MapTabParams } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
-import { MapContext, SelectedFeatureContext } from './contexts'
+import { FeatureMarkersContext, MapContext, SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 
 const MapTab = ({mapTabRef}: MapTabParams) => {
@@ -18,15 +18,13 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const map = useRef<Map | null>(null)
 
     const selectedFeature = useContext(SelectedFeatureContext)
+    const featureMarkers = useContext(FeatureMarkersContext)
     const mapContext = useContext(MapContext)
 
     const [loading, setLoading] = useState<boolean>(false)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
-
-    const featureMarkers: Record<string, FeatureMarker> = {} // osm id -> marker
-    // TODO: empty/unload markers when going far away
 
     const lng = -1.374801
     const lat = 47.05353
@@ -134,10 +132,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
 
     const loadFeatures = (features: GeoJSON.Feature[]) => {
         console.log(`loadFeatures with ${features.length} features`)
-        let lastMarker: FeatureMarker | null = null
+        const featureMarkersCopy = featureMarkers.value
         for (const feature of features) {
             if (feature.id && typeof feature.id === 'number') { // server must provide a feature.id with osm id
-                if (!(feature.id in featureMarkers) && feature.properties && feature.properties.natural) {
+                if (!(feature.id in featureMarkersCopy) && feature.properties && feature.properties.natural) {
                     const naturalType = naturalTypes[feature.properties.natural]
                     const element = document.createElement('div')
                     element.className = 'feature-marker'
@@ -156,37 +154,40 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                         featureMarker.addTo(map.current)
 
                         element.addEventListener('click', (e) => {
-                            selectFeature(featureMarker, undefined)
+                            selectFeature(feature.id, undefined)
                             e.stopPropagation() // pour ne pas cliquer en plus sur la potentielle layer sous le marker
                         })
-                        featureMarkers[feature.id] = featureMarker
-                        lastMarker = featureMarker
+                        featureMarkersCopy[feature.id] = featureMarker
                     }
                 }
             }
         }
+        featureMarkers.setValue(featureMarkersCopy)
         setLoading(false)
-        return lastMarker
     }
 
-    const selectFeature = (featureMarker: FeatureMarker, editingProperties: EditingProperties | undefined) => {
-        console.log('selectFeature', featureMarker, editingProperties)
+    const selectFeature = (id: string | number | undefined, editingProperties: EditingProperties | undefined) => {
+        // unselect current feature unless editingProperties is given
         if (editingProperties === undefined) unselectFeature()
-        featureMarker.getElement().classList.add('feature-marker-selected')
-        selectedFeature.setValue({
-            feature: featureMarker.feature,
-            marker: featureMarker,
-            editingProperties: editingProperties ?? new EditingProperties(featureMarker.feature)
-        })
+        // select the feature marker
+        if (id && id in featureMarkers.value) {
+            const featureMarker = featureMarkers.value[id]
+            featureMarker.getElement().classList.add('feature-marker-selected')
+            // select the feature
+            selectedFeature.setValue({
+                feature: featureMarker.feature,
+                editingProperties: editingProperties ?? new EditingProperties(featureMarker.feature)
+            })
+        }
     }
 
     const unselectFeature = () => {
-        console.log('unselectFeature', selectedFeature.value, selectedFeature.value?.marker)
+        //console.log('unselectFeature', selectedFeature.value, selectedFeature.value?.marker)
         if (selectedFeature.value !== null) {
-            if (selectedFeature.value.marker !== null) selectedFeature.value.marker.getElement().classList.remove('feature-marker-selected')
-            console.log('selectedFeature.setValue(null)')
-            selectedFeature.setValue(null)
+            const id = selectedFeature.value.feature.id
+            if (id && id in featureMarkers.value) featureMarkers.value[id].getElement().classList.remove('feature-marker-selected')
         }
+        selectedFeature.setValue(null)
     }
 
     const onAddButtonClick = () => {
@@ -218,8 +219,8 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                 feature.geometry = pointGeom
                 // conserve current editing properties
                 const editingProperties = selectedFeature.value.editingProperties
-                const featureMarker = loadFeatures([feature])
-                if (featureMarker) selectFeature(featureMarker, editingProperties)
+                loadFeatures([feature])
+                selectFeature(feature.id, editingProperties)
             } else { // create a new feature and select it
                 const feature: GeoJSON.Feature = {
                     id: selectedFeature.getNewId(),
@@ -227,8 +228,8 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                     geometry: pointGeom,
                     properties: {natural: 'tree'}
                 }
-                const featureMarker = loadFeatures([feature])
-                if (featureMarker) selectFeature(featureMarker, undefined)
+                loadFeatures([feature])
+                selectFeature(feature.id, undefined)
             }
         }
     }

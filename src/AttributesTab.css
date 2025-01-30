@@ -11,19 +11,20 @@ table {
 }
 
 .attribute_unmodified {
-    background-color: #000;
+    background-color: #444;
 }
 
 .attribute_modified {
-    background-color: #555500;
+    background-color: #af6700;
+
 }
 
 .attribute_new {
-    background-color: #005500;
+    background-color: #006700;
 }
 
 .attribute_deleted {
-    background-color: #550000;
+    background-color: #af2700;
 }
 
 .buttons {

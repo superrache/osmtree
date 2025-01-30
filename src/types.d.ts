@@ -61,7 +61,6 @@ export type NaturalType = {
 
 export type SelectedFeature = {
     feature: GeoJSON.Feature
-    marker: FeatureMarker | null
     editingProperties: EditingProperties
 } | null
 
@@ -69,6 +68,11 @@ export type SelectedFeatureContextValue = {
     value: SelectedFeature
     setValue: (value: SelectedFeature) => void
     getNewId: () => number
+}
+
+export type FeatureMarkersValue = {
+    value: Record<string, FeatureMarker>
+    setValue: (_: Record<string, FeatureMarker>) => void
 }
 
 export type MapContextValue = {
