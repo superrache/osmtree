@@ -9,14 +9,28 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     return (
         <div className="upload_tab">
             <br/>
-            {osmConnection.value.auth.authenticated() ? <span>connecté</span> : <span>non connecté</span>}
-            {!osmConnection.value.auth.authenticated() && <button onClick={osmLogin}>Se connecter à OpenStreetMap</button>}
+            {osmConnection.value.auth.authenticated() ? 
+                <span>Connecté à <a href='https://www.openstreetmap.org' target="_blank">OpenStreetMap</a></span>
+                : <span>La connexion à un compte <a href='https://www.openstreetmap.org' target="_blank">OpenStreetMap</a> est requise pour éditer les données.</span>}
             <br/>
+            {!osmConnection.value.auth.authenticated() && <div>
+                <button onClick={osmLogin}>Se connecter à OpenStreetMap</button>
+            </div>}
             {osmConnection.value.auth.authenticated() && <div>
-                Bienvenue {osmConnection.value.userName}
+                Bienvenue <a href={'https://www.openstreetmap.org/user/' + osmConnection.value.userName} target="_blank">{osmConnection.value.userName}</a>
                 <br/>
                 <button onClick={osmLogout}>Se déconnecter</button>
-                <button>Envoyer à OpenStreetMap</button>
+                <br/>
+                <br/>
+                Entités prêtes à être envoyées :
+                {osmConnection.value.editedFeatures.length === 0 && <div>Aucune</div>}
+                {osmConnection.value.editedFeatures.length > 0 && <ul>
+                    {osmConnection.value.editedFeatures.map((feature, index) => {
+                        return <li key={index}><a>{feature.feature.properties!.natural} {feature.feature.id}</a></li>
+                    })}
+                </ul>}
+                <br/>
+                <button disabled={osmConnection.value.editedFeatures.length === 0}>Envoyer à OpenStreetMap</button>
             </div>}
         </div>
     )

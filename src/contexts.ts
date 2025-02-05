@@ -22,7 +22,8 @@ export const OSMConnectionContext = createContext<OSMConnectionContextValue>({
     value: {
         userName: '',
         auth: null,
-        osmRequest: null
+        osmRequest: null,
+        editedFeatures: []
     },
     setValue: (_: OSMConnection) => {}
 })

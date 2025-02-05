@@ -92,7 +92,19 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
     }
 
     const onValidate = () => {
-
+        if (selectedFeature.value !== null) {
+            // send the selected feature to osmConnection.editedFeatures
+            const editedFeatures = osmConnection.value.editedFeatures
+            editedFeatures.push(selectedFeature.value)
+            osmConnection.setValue({
+                userName: osmConnection.value.userName,
+                auth: osmConnection.value.auth,
+                osmRequest: osmConnection.value.osmRequest,
+                editedFeatures: editedFeatures
+            })
+            // unselect the feature
+            selectedFeature.setValue(null)
+        }
     }
 
     return (
@@ -111,7 +123,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                         </tbody>
                     ))}
                 </table>
-                <span>Connecte-toi pour éditer les attributs</span>
+                <span>Connecte-toi à OpenStreetMap pour éditer les attributs</span>
             </div>}
             {osmConnection.value.auth.authenticated() && selectedFeature.value !== null && <div>
                 <table>

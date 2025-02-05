@@ -111,3 +111,15 @@ button:disabled {
     color: black;
     font-weight: 600;
 }
+
+.tab_notification {
+    background-color: #ff6677;
+    padding: 3px 10px;
+    border-radius: 10px;
+    border: white solid 1px;
+    color: white;
+    font-weight: 700;
+    position: relative;
+    left: 40px;
+    top: -56px;
+}

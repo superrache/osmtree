@@ -64,10 +64,12 @@ export type NaturalType = {
     selected: boolean
 }
 
-export type SelectedFeature = {
+export type EditableFeature = {
     feature: GeoJSON.Feature
     editingProperties: EditingProperties
-} | null
+}
+
+export type SelectedFeature = EditableFeature | null
 
 export type SelectedFeatureContextValue = {
     value: SelectedFeature
@@ -89,6 +91,7 @@ export type OSMConnection = {
     userName: string
     auth: any | null
     osmRequest: any | null
+    editedFeatures: EditableFeature[]
 }
 
 export type OSMConnectionContextValue = {
