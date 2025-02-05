@@ -174,6 +174,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             const featureMarker = featureMarkers.value[id]
             featureMarker.getElement().classList.add('feature-marker-selected')
             // select the feature
+            console.log('map: select feature', featureMarker.feature.id)
             selectedFeature.setValue({
                 feature: featureMarker.feature,
                 editingProperties: editingProperties ?? new EditingProperties(featureMarker.feature)
@@ -182,11 +183,16 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     }
 
     const unselectFeature = () => {
-        //console.log('unselectFeature', selectedFeature.value, selectedFeature.value?.marker)
-        if (selectedFeature.value !== null) {
+        console.log('map: unselectFeature', selectedFeature.value) // FIXME: why always null?
+        // if we had the selected id, we could target the good marker to unselect
+        // else we unselect every marker
+        /*if (selectedFeature.value !== null) {
             const id = selectedFeature.value.feature.id
             if (id && id in featureMarkers.value) featureMarkers.value[id].getElement().classList.remove('feature-marker-selected')
-        }
+        }*/
+        Object.values(featureMarkers.value).map((marker) => {
+            marker.getElement().classList.remove('feature-marker-selected')
+        })
         selectedFeature.setValue(null)
     }
 

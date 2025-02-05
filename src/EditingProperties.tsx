@@ -78,6 +78,14 @@ export class EditingProperties {
         return this.props
     }
 
+    getChangedCount(): number {
+        let c = 0
+        for (const prop of this.props) {
+            if (prop.status !== 'unmodified') c++
+        }
+        return c - 1
+    }
+
     __createEmptyLineAtEnd() {
         if (this.props[this.props.length - 1].key !== '') {
             // create an empty line at the end

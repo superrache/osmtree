@@ -14,6 +14,7 @@ import { FeatureMarker } from "./FeatureMarker"
 import { osmAuth } from 'osm-auth'
 import OsmRequest from 'osm-request'
 import { osmConfig } from "./consts"
+import NotificationBadge from "./NotificationBadge"
 
 const App = () => {
     const [activeTab, setActiveTab] = useState(0)
@@ -36,15 +37,21 @@ const App = () => {
     }, [mapBounds])
 
     useEffect(() => {
-        console.log('APP: selectedFeature updated', selectedFeature)
+        console.log('APP: selectedFeature updated', selectedFeature !== null ? selectedFeature.feature.id : null)
+        if (selectedFeature && selectedFeature.editingProperties) {
+            tabs[1].notificationCount = selectedFeature.editingProperties.getChangedCount()
+            setTabs(tabs)
+        } else {
+            tabs[1].notificationCount = 0
+            setTabs(tabs)
+        }
     }, [selectedFeature])
 
     useEffect(() => {
         if (readyToSendFeatureCount !== osmConnection.editedFeatures.length) {
             setReadyToSendFeatureCount(osmConnection.editedFeatures.length)
-            const tabsCp = tabs
             tabs[3].notificationCount = osmConnection.editedFeatures.length
-            setTabs(tabsCp)
+            setTabs(tabs)
         }
     }, [osmConnection])
 
@@ -172,13 +179,17 @@ const App = () => {
                             <nav className="tabs_bar">
                                 {tabs.map((tab, index) => {
                                     return (
-                                        <label key={index}
+                                        <button key={index}
                                             onClick={() => setActiveTab(index)}
                                             className={`tab_button ${activeTab === index ? 'tab_selected' : ''}`}>
-                                            <img src={tab.icon} width='50' />
-                                            {tab.label}
-                                            {tab.notificationCount > 0 && <div className="tab_notification">{tab.notificationCount}</div>}
-                                        </label>
+                                            <div className="tab-icon-container">
+                                                <img src={tab.icon} width='50' />
+                                                <NotificationBadge count={tab.notificationCount}></NotificationBadge>
+                                            </div>
+                                            <span className="tab-label">
+                                                {tab.label}
+                                            </span>
+                                        </button>
                                     )
                                 })}
                             </nav>

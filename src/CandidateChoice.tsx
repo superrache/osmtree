@@ -49,7 +49,7 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
                 if (candidate.species) sf.editingProperties.modifyValue('species', candidate.species)
                 sf.editingProperties.modifyValue('survey:date', new Date().toISOString().split('T')[0])
 
-                // set the value to update in every components
+                // set the value to update in every component
                 selectedFeature.setValue(sf)
             }
         })
