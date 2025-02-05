@@ -11,13 +11,20 @@ import UploadTab from "./UploadTab"
 import { OSMConnection, SelectedFeature } from "./types"
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext } from "./contexts"
 import { FeatureMarker } from "./FeatureMarker"
+import { osmAuth } from 'osm-auth'
+import OsmRequest from 'osm-request'
+import { osmConfig } from "./consts"
 
 const App = () => {
     const [activeTab, setActiveTab] = useState(0)
     const [selectedFeature, setSelectedFeature] = useState<SelectedFeature>(null)
     const [featureMarkers, setFeatureMarkers] = useState<Record<string, FeatureMarker>>({})
     const [mapBounds, setMapBounds] = useState<string>('0,0,0,0')
-    const [osmConnection, setOsmConnection] = useState<OSMConnection>({connected: false, userName: ''})
+    const [osmConnection, setOsmConnection] = useState<OSMConnection>({
+        userName: '',
+        auth: osmAuth(osmConfig),
+        osmRequest: new OsmRequest(osmConfig)
+    })
     const [currentId, setCurrentId] = useState<number>(-1)
 
     const mapTabRef = useRef<() => void>()
@@ -39,11 +46,82 @@ const App = () => {
           }, 0)
     }
 
+    const osmLogin = () => {
+        console.log('osmLogin')
+        if (osmConnection.auth && !osmConnection.auth.authenticated()) {
+            osmConnection.auth.authenticate((err: any, res: any) => {
+                if(err) {
+                    console.error(err)
+                    osmLogout()
+                }
+                else {
+                    getOsmUserName()
+                }
+            })
+        }
+    }
+
+    const osmLogout = () => {
+        console.log('osmLogout')
+        if (osmConnection.auth && osmConnection.auth.authenticated()) {
+            osmConnection.auth.logout()
+            osmConnection.osmRequest._auth = null
+            setOsmConnection({
+                userName: '',
+                auth: osmConnection.auth,
+                osmRequest: osmConnection.osmRequest
+            })
+        }
+    }
+
+    const getOsmUserName = () => {
+        console.log('getOsmUserName')
+        if(osmConnection.auth.authenticated() && osmConnection.userName.length === 0) {
+            //Get user details
+            osmConnection.auth.xhr({
+                method: 'GET',
+                path: '/api/0.6/user/details'
+            }, (err: any, details: any) => {
+                if(err) {
+                    console.log(err)
+                    osmLogout()
+                }
+                else {
+                    try {
+                        const userName = details.firstChild.childNodes[1].attributes.display_name.value
+                        console.log('connected as', userName)
+                        osmConnection.osmRequest._auth = osmConnection.auth
+                        // update context
+                        setOsmConnection({
+                            userName: userName,
+                            auth: osmConnection.auth,
+                            osmRequest: osmConnection.osmRequest
+                        })
+                    }
+                    catch(e) {
+                        console.error(e)
+                        osmLogout()
+                    }
+                }
+            })
+        }
+    }
+
+    // landing from osm authentication page
+    const params = new URLSearchParams((window.location.search || '?').substring(1))
+    if (params.get('code') !== null && osmConnection.auth && !osmConnection.auth.authenticated()) {
+        osmConnection.auth.authenticate(() => {
+            console.log('Authentication success')
+            window.history.replaceState(null, '', window.location.href.replace(window.location.search, ""))
+            setTimeout(() => getOsmUserName(), 100)
+        })
+    }
+
     const tabs = [
         { icon: mapImg, label: 'Carte', content: <MapTab mapTabRef={mapTabRef}></MapTab> },
         { icon: attributesImg, label: 'Attributs', content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
         { icon: identifyImg, label: 'Identifier', content: <IdentifierTab></IdentifierTab> },
-        { icon: uploadImg, label: 'Envoi OSM', content: <UploadTab></UploadTab> }
+        { icon: uploadImg, label: 'Envoi OSM', content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout}></UploadTab> }
     ]
 
     return (

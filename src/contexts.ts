@@ -20,8 +20,9 @@ export const MapContext = createContext<MapContextValue>({
 
 export const OSMConnectionContext = createContext<OSMConnectionContextValue>({
     value: {
-        connected: false,
-        userName: ''
+        userName: '',
+        auth: null,
+        osmRequest: null
     },
     setValue: (_: OSMConnection) => {}
 })

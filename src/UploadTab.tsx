@@ -2,32 +2,19 @@ import { useContext } from 'react'
 import './UploadTab.css'
 import { OSMConnectionContext } from './contexts'
 
-const UploadTab = () => {
+const UploadTab = ({osmLogin, osmLogout}) => {
     const osmConnection = useContext(OSMConnectionContext)
-
-    const onConnect = () => {
-        osmConnection.setValue({
-            connected: true,
-            userName: 'toto'
-        })
-    }
-
-    const onDisconnect = () => {
-        osmConnection.setValue({
-            connected: false,
-            userName: ''
-        })
-    }
 
     return (
         <div className="upload_tab">
             <br/>
-            {!osmConnection.value.connected && <button onClick={onConnect}>Se connecter à OpenStreetMap</button>}
+            {osmConnection.value.auth.authenticated() ? <span>connecté</span> : <span>non connecté</span>}
+            {!osmConnection.value.auth.authenticated() && <button onClick={osmLogin}>Se connecter à OpenStreetMap</button>}
             <br/>
-            {osmConnection.value.connected && <div>
+            {osmConnection.value.auth.authenticated() && <div>
                 Bienvenue {osmConnection.value.userName}
                 <br/>
-                <button onClick={onDisconnect}>Se déconnecter</button>
+                <button onClick={osmLogout}>Se déconnecter</button>
                 <button>Envoyer à OpenStreetMap</button>
             </div>}
         </div>

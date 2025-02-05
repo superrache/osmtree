@@ -81,8 +81,9 @@ export type MapContextValue = {
 }
 
 export type OSMConnection = {
-    connected: boolean
     userName: string
+    auth: any | null
+    osmRequest: any | null
 }
 
 export type OSMConnectionContextValue = {

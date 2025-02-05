@@ -34,3 +34,13 @@ export const organs: Record<string, Organ> = {
     'fruit': {selected: false, icon: fruitImg, label: 'Fruit'},
     'bark': {selected: false, icon: barkImg, label: 'Écorce'}
 }
+
+export const osmConfig = {
+    scope: "read_prefs write_api",
+    client_id: 'LKw3VHQ3kkgbFZSO-8OAZdfZ6c21nGAJMKKlm9nGSEo',
+    redirect_uri: window.location.origin.replace('localhost', '127.0.0.1'), // !important: osm-auth allows only this host for http (not 'localhost')
+    url: 'https://www.openstreetmap.org',
+    apiUrl: 'https://api.openstreetmap.org',
+    auto: true,
+    singlepage: true
+}

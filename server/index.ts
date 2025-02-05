@@ -5,7 +5,6 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import FormData from 'form-data'
 import cors from 'cors'
-import { json } from 'stream/consumers'
 
 const prod = (process.env.NODE_ENV === 'production')
 
@@ -22,7 +21,7 @@ const simpleCache: Record<string, GeoJSON.FeatureCollection> = {} // request url
 const app = express()
 
 app.use(cors({
-    origin: 'http://localhost:5173' // client URL allowed for CORS
+    origin: 'http://127.0.0.1:5173' // client URL allowed for CORS
 }))
 
 // multer config
