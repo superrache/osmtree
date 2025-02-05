@@ -48,6 +48,11 @@ export type AttributesTabParams = {
     onLocateFeature: () => void
 }
 
+export type UploadTabParams = {
+    osmLogin: () => void
+    osmLogout: () => void
+}
+
 export type MapTabParams = {
     mapTabRef: React.MutableRefObject<(() => void) | undefined>
 }

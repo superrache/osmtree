@@ -112,9 +112,12 @@ const App = () => {
     if (params.get('code') !== null && osmConnection.auth && !osmConnection.auth.authenticated()) {
         osmConnection.auth.authenticate(() => {
             console.log('Authentication success')
-            window.history.replaceState(null, '', window.location.href.replace(window.location.search, ""))
             setTimeout(() => getOsmUserName(), 100)
+            window.history.replaceState(null, '', window.location.href.replace(window.location.search, ""))
+            setActiveTab(3)
         })
+    } else if (osmConnection.auth && osmConnection.auth.authenticated()) { // already connected at startup, just update username
+        getOsmUserName()
     }
 
     const tabs = [

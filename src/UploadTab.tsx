@@ -1,8 +1,9 @@
 import { useContext } from 'react'
 import './UploadTab.css'
 import { OSMConnectionContext } from './contexts'
+import { UploadTabParams } from './types'
 
-const UploadTab = ({osmLogin, osmLogout}) => {
+const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const osmConnection = useContext(OSMConnectionContext)
 
     return (
