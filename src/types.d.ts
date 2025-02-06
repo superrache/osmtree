@@ -54,7 +54,7 @@ export type UploadTabParams = {
 }
 
 export type MapTabParams = {
-    mapTabRef: React.MutableRefObject<(() => void) | undefined>
+    mapTabRef: React.RefObject<(() => void) | undefined>
 }
 
 export type NaturalType = {

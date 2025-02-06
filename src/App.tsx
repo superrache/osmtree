@@ -30,7 +30,7 @@ const App = () => {
     const [currentId, setCurrentId] = useState<number>(-1)
     const [readyToSendFeatureCount, setReadyToSendFeatureCount] = useState(0)
 
-    const mapTabRef = useRef<() => void>()
+    const mapTabRef = useRef<(() => void) | undefined>(undefined)
 
     useEffect(() => {
         console.log('APP: mapBounds updated', mapBounds)

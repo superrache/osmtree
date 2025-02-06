@@ -6,3 +6,24 @@
 li {
     list-style: disc;
 }
+
+.comment {
+    width: 90%;
+    font-size: 1em;
+    margin: 10px;
+    padding: 10px;
+    overflow-y: auto;
+}
+
+.logs {
+    color: white;
+    font-family: 'Courier New', Courier, monospace;
+    background-color: black;
+    width: 90%;
+    height: 300px;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-line;
+    margin: 10px;
+    padding: 10px;
+}

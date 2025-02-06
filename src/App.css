@@ -24,15 +24,10 @@ button {
     margin: 5px;
 }
 
-button:hover:enabled {
+button:hover {
     background-color: #ff9454;
     color: black;
     outline: solid 1px white;
-}
-
-button:active {
-    background-color: #ff9454;
-    color: black;
 }
 
 button:disabled {
