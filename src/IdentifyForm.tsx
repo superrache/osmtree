@@ -5,8 +5,8 @@ import { IdentifyFormProps, IdentifyParams } from './types'
 import { naturalTypes, organs } from './consts'
 
 const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
-    const [organ, setOrgan] = useState<string>('leaf')
-    const [naturalType, setNaturalType] = useState<string>('tree')
+    const [organ, setOrgan] = useState<string>(Object.keys(organs)[0])
+    const [naturalType, setNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
     const [pictureFile, setPictureFile] = useState<File>()
     const [picturePreview, setPicturePreview] = useState<string>('')
 
@@ -23,27 +23,6 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
         return picturePreview.length > 0
     }
 
-    const onNaturalTypeSelect = (tag: string) => {
-        for (const [nid, naturalType] of Object.entries(naturalTypes)) {
-            naturalType.selected = (nid === tag)
-            if (nid === tag) {
-                setNaturalType(tag)
-                break
-            }
-        }
-    }
-
-    const onOrganSelect = (id: string) => {
-        for(const [oid, organ] of Object.entries(organs)) {
-            organ.selected = (oid === id)
-            if (oid === id) {
-                console.log('select organ ' + oid)
-                setOrgan(oid)
-                break
-            }
-        }
-    }
-
     const handleIdentify = () => {
         if (pictureFile) {
                 const identifyParams: IdentifyParams = {
@@ -58,13 +37,13 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
     return (
         <>
             <div className="organs">
-                {Object.entries(naturalTypes).map(([tag, naturalType]) => {
+                {Object.entries(naturalTypes).map(([tag, nt]) => {
                     return (
                         <div className="organ" key={tag}
-                            style={{opacity: naturalType.selected ? 1 : 0.5}}
-                            onClick={() => onNaturalTypeSelect(tag)}>
-                            <img src={naturalType.icon} width='50' />
-                            {naturalType.label}
+                            style={{opacity: tag === naturalType ? 1 : 0.5}}
+                            onClick={() => setNaturalType(tag)}>
+                            <img src={nt.icon} width='50' />
+                            {nt.label}
                         </div>
                     )
                 })}
@@ -87,13 +66,13 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
             </div>
 
             <div className="organs">
-                {Object.entries(organs).map(([oid, organ]) => {
+                {Object.entries(organs).map(([oid, org]) => {
                     return (
                         <div className="organ" key={oid}
-                                style={{opacity: organ.selected ? 1 : 0.5}}
-                                onClick={() => onOrganSelect(oid)}>
-                            <img src={organ.icon} width='50' />
-                            {organ.label}
+                                style={{opacity: oid === organ ? 1 : 0.5}}
+                                onClick={() => setOrgan(oid)}>
+                            <img src={org.icon} width='50' />
+                            {org.label}
                         </div>
                     )
                 })}

@@ -11,28 +11,25 @@ export const naturalTypes: Record<string, NaturalType> = {
     'tree': {
         icon: naturalTreeIcon,
         color: '#7cb26f',
-        label: 'Arbre',
-        selected: true,
+        label: 'Arbre'
     },
     'shrub': {
         icon: naturalShrubIcon,
         color: '#2e856f',
-        label: 'Arbuste',
-        selected: false
+        label: 'Arbuste'
     },
     'plant': {
         icon: naturalPlantIcon,
         color: '#7ce448',
-        label: 'Herbacée',
-        selected: false
+        label: 'Herbacée'
     }
 }
 
 export const organs: Record<string, Organ> = {
-    'leaf': {selected: true, icon: leafImg, label: 'Feuille'},
-    'flower': {selected: false, icon: flowerImg, label: 'Fleur'},
-    'fruit': {selected: false, icon: fruitImg, label: 'Fruit'},
-    'bark': {selected: false, icon: barkImg, label: 'Écorce'}
+    'leaf': {icon: leafImg, label: 'Feuille'},
+    'flower': {icon: flowerImg, label: 'Fleur'},
+    'fruit': {icon: fruitImg, label: 'Fruit'},
+    'bark': {icon: barkImg, label: 'Écorce'}
 }
 
 export const osmConfig = {

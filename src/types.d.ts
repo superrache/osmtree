@@ -18,7 +18,6 @@ export type DataResponse = {
 }
 
 export type Organ = {
-    selected: boolean
     icon: string
     label: string
   }
@@ -67,7 +66,6 @@ export type NaturalType = {
     icon: string
     color: string
     label: string
-    selected: boolean
 }
 
 export type EditableFeature = {
