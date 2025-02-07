@@ -28,7 +28,6 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
         const newEditingProperties = new EditingProperties(newFeature)
         return {
             feature: newFeature,
-            marker: null,
             editingProperties: newEditingProperties
         }
     }
@@ -50,7 +49,10 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
                 sf.editingProperties.modifyValue('survey:date', new Date().toISOString().split('T')[0])
 
                 // set the value to update in every component
-                selectedFeature.setValue(sf)
+                selectedFeature.setValue({
+                    feature: sf.feature,
+                    editingProperties: sf.editingProperties
+                })
             }
         })
         setCandidates(newCandidates)

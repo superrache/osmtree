@@ -8,7 +8,7 @@ import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
-import { OSMConnection, SelectedFeature } from "./types"
+import { OSMConnection, SelectedFeature, Tab } from "./types"
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext } from "./contexts"
 import { FeatureMarker } from "./FeatureMarker"
 import { osmAuth } from 'osm-auth'
@@ -28,22 +28,19 @@ const App = () => {
         editedFeatures: []
     })
     const [currentId, setCurrentId] = useState<number>(-1)
+
     const [readyToSendFeatureCount, setReadyToSendFeatureCount] = useState(0)
 
     const mapTabRef = useRef<(() => void) | undefined>(undefined)
 
     useEffect(() => {
-        console.log('APP: mapBounds updated', mapBounds)
-    }, [mapBounds])
-
-    useEffect(() => {
         console.log('APP: selectedFeature updated', selectedFeature !== null ? selectedFeature.feature.id : null)
         if (selectedFeature && selectedFeature.editingProperties) {
             tabs[1].notificationCount = selectedFeature.editingProperties.getChangedCount()
-            setTabs(tabs)
+            setTabs(Array.from(tabs))
         } else {
             tabs[1].notificationCount = 0
-            setTabs(tabs)
+            setTabs(Array.from(tabs))
         }
     }, [selectedFeature])
 
@@ -127,6 +124,13 @@ const App = () => {
         }
     }
 
+    const [tabs, setTabs] = useState<Tab[]>([
+        { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef}></MapTab> },
+        { icon: attributesImg, label: 'Attributs', notificationCount: 0, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
+        { icon: identifyImg, label: 'Identifier', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
+        { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout}></UploadTab> }
+    ])
+
     // landing from osm authentication page
     const params = new URLSearchParams((window.location.search || '?').substring(1))
     if (params.get('code') !== null && osmConnection.auth && !osmConnection.auth.authenticated()) {
@@ -136,16 +140,9 @@ const App = () => {
             window.history.replaceState(null, '', window.location.href.replace(window.location.search, ""))
             setActiveTab(3)
         })
-    } else if (osmConnection.auth && osmConnection.auth.authenticated()) { // already connected at startup, just update username
+    } else if (osmConnection.auth && osmConnection.auth.authenticated() && osmConnection.userName.length === 0) { // already connected at startup, just update username
         getOsmUserName()
     }
-
-    const [tabs, setTabs] = useState([
-        { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef}></MapTab> },
-        { icon: attributesImg, label: 'Attributs', notificationCount: 0, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
-        { icon: identifyImg, label: 'Identifier', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
-        { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout}></UploadTab> }
-    ])
 
     return (
         <OSMConnectionContext.Provider value={{

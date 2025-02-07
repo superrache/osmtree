@@ -3,6 +3,12 @@ import { EditingProperties } from "./EditingProperties"
 import { FeatureMarker } from "./FeatureMarker"
 import { Ref } from "react"
 
+export type Tab = {
+    icon: string
+    label: string
+    notificationCount: number
+    content: Component
+}
 export type DataResponse = {
     codename?: string
     error?: number
