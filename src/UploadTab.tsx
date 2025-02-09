@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import './UploadTab.css'
 import { FeatureMarkersContext, OSMConnectionContext } from './contexts'
 import { UploadTabParams } from './types'
+import { naturalTypes } from './consts'
 
 const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const osmConnection = useContext(OSMConnectionContext)
@@ -25,6 +26,21 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
         }
     }, [logs])
+
+    useEffect(() => {
+        let news = 0, updates = 0
+        const typeNames = new Set()
+        for (const feature of osmConnection.value.editedFeatures) {
+            if (parseInt(`${feature.feature.id}`) < 0) news++
+            else updates++
+            typeNames.add(naturalTypes[feature.feature.properties['natural']].label.toLowerCase())
+        }
+        let changeType = news > 0 ? 'ajout' : ''
+        changeType += updates > 0 ? `${changeType.length > 0 ? ' /' : ''} mise à jour` : ''
+        const plurial = osmConnection.value.editedFeatures.length > 0
+        const names = Array.from(typeNames).join(plurial ? 's, ' : ', ') + (plurial ? 's' : '')
+        setComment(`${changeType} de ${osmConnection.value.editedFeatures.length} ${names}`)
+    }, [osmConnection.value])
 
     const onSend = async () => {
         resetLogs()
