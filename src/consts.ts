@@ -32,7 +32,17 @@ export const organs: Record<string, Organ> = {
     'bark': {icon: barkImg, label: 'Écorce'}
 }
 
-export const osmConfig = {
+const devOsmConfig = {
+    scope: "read_prefs write_api",
+    client_id: '6wbgf9PZVtE6dBsN8dNkT2668d43gW7-A_ln5hAFdag',
+    redirect_uri: window.location.origin.replace('localhost', '127.0.0.1'), // !important: osm-auth allows only this host for http (not 'localhost')
+    url: 'https://master.apis.dev.openstreetmap.org',
+    apiUrl: 'https://master.apis.dev.openstreetmap.org',
+    auto: true,
+    singlepage: true
+}
+
+const prodOsmConfig = {
     scope: "read_prefs write_api",
     client_id: 'LKw3VHQ3kkgbFZSO-8OAZdfZ6c21nGAJMKKlm9nGSEo',
     redirect_uri: window.location.origin.replace('localhost', '127.0.0.1'), // !important: osm-auth allows only this host for http (not 'localhost')
@@ -41,3 +51,5 @@ export const osmConfig = {
     auto: true,
     singlepage: true
 }
+
+export const osmConfig = prodOsmConfig

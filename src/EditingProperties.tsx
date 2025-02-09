@@ -78,6 +78,14 @@ export class EditingProperties {
         return this.props
     }
 
+    getTagsToSend(): Record<string, string | number> {
+        const tags: Record<string, string | number> = {}
+        for (const prop of this.props) {
+            if (prop.key !== '' && prop.tag !== '' && prop.status !== 'deleted') tags[prop.key] = prop.tag
+        }
+        return tags
+    }
+
     getChangedCount(): number {
         let c = 0
         for (const prop of this.props) {
