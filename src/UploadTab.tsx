@@ -28,18 +28,23 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     }, [logs])
 
     useEffect(() => {
+        // generate a comment from editedFeatures
         let news = 0, updates = 0
         const typeNames = new Set()
         for (const feature of osmConnection.value.editedFeatures) {
             if (parseInt(`${feature.feature.id}`) < 0) news++
             else updates++
-            typeNames.add(naturalTypes[feature.feature.properties['natural']].label.toLowerCase())
+            if (feature.feature.properties && feature.feature.properties.natural && feature.feature.properties.natural in naturalTypes) {
+                typeNames.add(naturalTypes[feature.feature.properties.natural].label.toLowerCase())
+            }
         }
-        let changeType = news > 0 ? 'ajout' : ''
-        changeType += updates > 0 ? `${changeType.length > 0 ? ' /' : ''} mise à jour` : ''
-        const plurial = osmConnection.value.editedFeatures.length > 0
-        const names = Array.from(typeNames).join(plurial ? 's, ' : ', ') + (plurial ? 's' : '')
-        setComment(`${changeType} de ${osmConnection.value.editedFeatures.length} ${names}`)
+        if (news > 0 || updates > 0) {
+            let changeType = news > 0 ? 'ajout' : ''
+            changeType += updates > 0 ? `${changeType.length > 0 ? ' /' : ''} mise à jour` : ''
+            const plurial = osmConnection.value.editedFeatures.length > 1
+            const names = Array.from(typeNames).join(plurial ? 's, ' : ', ') + (plurial ? 's' : '')
+            setComment(`${changeType} de ${osmConnection.value.editedFeatures.length} ${names}`)    
+        }
     }, [osmConnection.value])
 
     const onSend = async () => {
