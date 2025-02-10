@@ -140,8 +140,12 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                     ))}
                 </table>
                 {selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] === 0 && <div>Cet élément n'a pas de position géographique. <button onClick={onLocateFeature}>Positionner</button></div>}
+                {selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] !== 0 && <div><button onClick={onLocateFeature}>Déplacer l'élément</button></div>}
                 <div className="buttons">
-                    <button onClick={onValidate} disabled={selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] === 0}>Valider</button>
+                    <button onClick={onValidate} disabled={
+                        (selectedFeature.value.feature.geometry.type === 'Point' 
+                        && selectedFeature.value.feature.geometry.coordinates[0] === 0)
+                        || selectedFeature.value.editingProperties.getChangedCount() === 0}>Valider</button>
                     <button onClick={onCancel}>Annuler</button>
                 </div>
             </div>}

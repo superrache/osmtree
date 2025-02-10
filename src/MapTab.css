@@ -24,6 +24,23 @@
     padding: 0.2em;
 }
 
+.selection_info {
+    position: absolute;
+    z-index: 502;
+    top: 50px;
+    left: 5px;
+    background-color: #353735;
+    color: white;
+    font-size: 1.2em;
+    border-radius: 5px;
+    border: #ff9454 solid 2px;
+    padding: 5px;
+}
+
+.species_name {
+    font-weight: 900;
+}
+
 .loading {
     position: absolute;
     z-index: 501;

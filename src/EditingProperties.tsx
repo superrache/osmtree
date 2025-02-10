@@ -1,3 +1,5 @@
+import { LngLat } from "maplibre-gl"
+
 export type EditingProperty = {
     key: string
     tag: string
@@ -6,6 +8,7 @@ export type EditingProperty = {
 
 export class EditingProperties {
     props: EditingProperty[]
+    newPosition: LngLat | undefined
 
     constructor(feature: GeoJSON.Feature) {
         this.props = []
@@ -19,6 +22,7 @@ export class EditingProperties {
             }
             this.props.push({key: '', tag: '', status: 'new'})
         }
+        this.newPosition = undefined
     }
 
     deleteKey(key: string): void {
@@ -91,7 +95,16 @@ export class EditingProperties {
         for (const prop of this.props) {
             if (prop.status !== 'unmodified') c++
         }
+        if (this.newPosition) c++
         return c - 1
+    }
+
+    getNewPosition(): LngLat | undefined {
+        return this.newPosition
+    }
+
+    setNewPosition(newPos: LngLat | undefined) {
+        this.newPosition = newPos
     }
 
     __createEmptyLineAtEnd() {

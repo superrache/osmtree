@@ -9,6 +9,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const featureMarkers = useContext(FeatureMarkersContext)
     const [comment, setComment] = useState<string>('')
     const [logs, setLogs] = useState<string[]>([])
+    const [lastChangesetId, setLastChangesetId] = useState<string>()
     const logContainerRef = useRef(null)
 
     const commentChanged = (event) => {
@@ -49,9 +50,10 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
 
     const onSend = async () => {
         resetLogs()
-        appendLog(`Envoi de ${osmConnection.value.editedFeatures.length} éléments vers OpenStreetMap`)
+        appendLog(`Envoi de ${osmConnection.value.editedFeatures.length} élément(s) vers OpenStreetMap`)
+        const osmRequest = osmConnection.value.osmRequest
 
-        const changesetId = await osmConnection.value.osmRequest.createChangeset('osmtree', comment)
+        const changesetId = await osmRequest.createChangeset('osmtree', comment)
         appendLog(`Groupe de modification créé : changeset=${changesetId}`)
 
         const newMarkers = featureMarkers.value
@@ -61,12 +63,13 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 const id = feature.feature.id
                 appendLog(`Elément ${id}`)
                 const isNew = parseInt(`${id}`) < 0
-                const coords = feature.feature.geometry.type === 'Point' ? feature.feature.geometry.coordinates : [0, 0]
+                const newPosition = feature.editingProperties.getNewPosition() // LngLat or undefined
+                const coordsLatLng = newPosition !== undefined ? [newPosition.lat, newPosition.lng] : [0, 0]
                 const tags = feature.editingProperties.getTagsToSend() // only new/modified/unmodified not empty tags
 
                 if (isNew) {
-                    let element = await osmConnection.value.osmRequest.createNodeElement(coords[1], coords[0], tags) // lat, lon
-                    const newId = await osmConnection.value.osmRequest.sendElement(element, changesetId)
+                    let element = await osmRequest.createNodeElement(coordsLatLng[0], coordsLatLng[1], tags)
+                    const newId = await osmRequest.sendElement(element, changesetId)
                     appendLog(`Nouvel identifiant ${newId}`)
 
                     // update the feature and marker
@@ -75,32 +78,33 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                     newMarkers[newId] = marker
                     delete newMarkers[id]
                 } else {
-                    let element = await osmConnection.value.osmRequest.fetchElement(`node/${id}`) // id au format node/123456789
+                    let element = await osmRequest.fetchElement(`node/${id}`) // id au format node/123456789
                     // update coordinates
-                    element = osmConnection.value.osmRequest.setCoordinates(element, coords[1], coords[0])
+                    if (newPosition !== undefined) element = osmRequest.setCoordinates(element, coordsLatLng[0], coordsLatLng[1])
                     // tags to delete
                     for (const prop of feature.editingProperties.getProps()) {
                         if (prop.status === 'deleted') {
                             appendLog(`Suppression du tag ${prop.key}`)
-                            element = osmConnection.value.osmRequest.removeTag(element, prop.key)
+                            element = osmRequest.removeTag(element, prop.key)
                         }
                     }
                     appendLog('Mise à jour des autres tags')
-                    element = osmConnection.value.osmRequest.setTags(element, tags)
+                    element = osmRequest.setTags(element, tags)
                     appendLog('Envoi de l\'élément')
-                    await osmConnection.value.osmRequest.sendElement(element, changesetId)
+                    await osmRequest.sendElement(element, changesetId)
                 }
             }
         }
         appendLog('Fermeture du groupe de modification')
-        await osmConnection.value.osmRequest.closeChangeset(changesetId)
+        await osmRequest.closeChangeset(changesetId)
+        setLastChangesetId(changesetId)
 
         // reset data by setting empty editedFeatures...
         osmConnection.setValue({
             userName: osmConnection.value.userName,
             editedFeatures: [],
             auth: osmConnection.value.auth,
-            osmRequest: osmConnection.value.osmRequest
+            osmRequest: osmRequest
         })
         // ...and updating features
         featureMarkers.setValue(newMarkers)
@@ -123,7 +127,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 <br/>
                 <br/>
                 Eléments prêts à être envoyés :
-                {osmConnection.value.editedFeatures.length === 0 && <div>Aucune</div>}
+                {osmConnection.value.editedFeatures.length === 0 && <div>Aucun</div>}
                 {osmConnection.value.editedFeatures.length > 0 && <ul>
                     {osmConnection.value.editedFeatures.map((feature, index) => {
                         return <li key={index}><a>{feature.feature.properties!.natural} {feature.feature.id}</a></li>
@@ -151,6 +155,14 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                     </div>
                     ))}
                 </div>
+                {lastChangesetId.length > 0 && <div>
+                    Dernier groupe de modification envoyé : <a href={`https://www.openstreetmap.org/changeset/${lastChangesetId}`}>{lastChangesetId}</a>
+                </div>}
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+                <br/>
             </div>}
         </div>
     )

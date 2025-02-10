@@ -3,7 +3,7 @@ import logo from '/osmtree.svg' // also favicon
 import confirmImg from './assets/confirm.svg'
 import cancelImg from './assets/cancel.svg'
 import crossImg from './assets/cross.svg'
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, LngLatLike } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getServerUrl } from './utils'
@@ -173,6 +173,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         if (id && id in featureMarkers.value) {
             const featureMarker = featureMarkers.value[id]
             featureMarker.getElement().classList.add('feature-marker-selected')
+            if (editingProperties) {
+                const newPos = editingProperties.getNewPosition()
+                if (newPos) featureMarker.setLngLat(newPos)
+            }
             // select the feature
             console.log('map: select feature', featureMarker.feature.id)
             selectedFeature.setValue({
@@ -225,6 +229,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                 feature.geometry = pointGeom
                 // conserve current editing properties
                 const editingProperties = selectedFeature.value.editingProperties
+                editingProperties.setNewPosition(center)
                 loadFeatures([feature])
                 selectFeature(feature.id, editingProperties)
             } else { // create a new feature and select it
@@ -235,7 +240,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                     properties: {natural: 'tree'}
                 }
                 loadFeatures([feature])
-                selectFeature(feature.id, undefined)
+                // set new position
+                const editingProperties = new EditingProperties(feature)
+                editingProperties.setNewPosition(center)
+                selectFeature(feature.id, editingProperties)
             }
         }
     }
@@ -268,8 +276,16 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         <div id="map" className="map" ref={mapContainer}>
             <a className="title">
                 <img src={logo} className="logo" alt="osmtree" />
-                osmtree {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.id}
+                osmtree
             </a>
+            {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties && <div className='selection_info'>
+                <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
+                    selectedFeature.value.feature.properties['species:fr'] 
+                    : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
+                    selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
+                <br/>
+                <span>{naturalTypes[selectedFeature.value.feature.properties['natural']].label}</span>
+            </div>}
             { loading && <div className='loading'>Loading</div> }
             { !creatingPosition && <div className="creating-position-buttons">
                 <button className="creating-position-button" onClick={onAddButtonClick}>
