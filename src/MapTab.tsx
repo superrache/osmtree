@@ -12,6 +12,7 @@ import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
+import { getOverpassData } from './Overpass'
 
 const MapTab = ({mapTabRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
@@ -116,16 +117,8 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const reload = async (bounds: string) => {
         setLoading(true)
 
-        const codename = btoa(Math.random().toString()).substring(10, 5)
-        console.log(`reload ${codename}`)
-
-        const response = await fetch(`${getServerUrl()}/api/data?bounds=${bounds}&codename=${codename}`)
-        const data: DataResponse = await response.json()
-        if (data.error) {
-            console.log(`${codename}: query error ${data.error}`)
-        } else {
-            console.log(`received response for ${data.codename}`)
-            if (data.features)
+        const data = await getOverpassData(bounds)
+        if (data && data.features) {
             loadFeatures(data.features)
         }
     }

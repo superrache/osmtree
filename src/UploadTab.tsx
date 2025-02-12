@@ -155,7 +155,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                     </div>
                     ))}
                 </div>
-                {lastChangesetId.length > 0 && <div>
+                {lastChangesetId && lastChangesetId.length > 0 && <div>
                     Dernier groupe de modification envoyé : <a href={`https://www.openstreetmap.org/changeset/${lastChangesetId}`}>{lastChangesetId}</a>
                 </div>}
                 <br/>
