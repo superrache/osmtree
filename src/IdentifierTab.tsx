@@ -1,22 +1,33 @@
-import { useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import './IdentifierTab.css'
-import IdentifyForm from './IdentifyForm'
-import { IdentifyParams, PlantNetCandidate } from './types'
+import PlantNetIdentifyForm from './PlantNetIdentifyForm'
+import { PlantNetIdentifyParams, PlantNetCandidate } from './types'
 import CandidateChoice from './CandidateChoice'
 import { getApiUrl } from './utils'
+import { SelectedFeatureContext } from './contexts'
+import { naturalTypes } from './consts'
 
 const IdentifierTab = () => {
     const maxResults = 12
 
+    const selectedFeature = useContext(SelectedFeatureContext)
+
     const [localizedSpeciesKey, setLocalizedSpeciesKey] = useState<string>('species:en')
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [candidates, setCandidates] = useState<PlantNetCandidate[]>([])
-    const [naturalType, setNaturalType] = useState<string>('tree')
+    const [naturalType, setNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
 
-    const handleIdentify = async (params: IdentifyParams) => {
+    useEffect(() => {
+        if (selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties) {
+            console.log('use effect identify', selectedFeature.value.feature.properties['natural'])
+            setNaturalType(selectedFeature.value.feature.properties['natural'])
+        } // else (no selection) let the last natural type selected
+    }, [selectedFeature.value])
+
+    const handleIdentify = async (params: PlantNetIdentifyParams) => {
         setIsLoading(true)
         setCandidates([])
-        setNaturalType(params.naturalType)
+        setNaturalType(naturalType)
         try {
             // save current language to save result in the good osm key
             const lang = 'fr' // TODO: get user lang
@@ -72,7 +83,20 @@ const IdentifierTab = () => {
 
     return (
         <div className='identifier_tab'>
-            <IdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
+            <div className="things">
+                {Object.entries(naturalTypes).map(([tag, nt]) => {
+                    return (
+                        <div className="thing" key={tag}
+                            style={{opacity: tag === naturalType ? 1 : 0.5}}
+                            onClick={() => setNaturalType(tag)}>
+                            <img src={nt.icon} width='50' />
+                            {nt.label}
+                        </div>
+                    )
+                })}
+            </div>
+
+            <PlantNetIdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
 
             { isLoading && <div>Identification en cours...</div>}
 

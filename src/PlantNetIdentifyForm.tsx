@@ -1,12 +1,11 @@
 import { ChangeEvent, useState } from 'react'
 import cameraImg from './assets/camera.svg'
-import './IdentifyForm.css'
-import { IdentifyFormProps, IdentifyParams } from './types'
-import { naturalTypes, organs } from './consts'
+import './PlantNetIdentifyForm.css'
+import { PlantNetIdentifyFormProps, PlantNetIdentifyParams } from './types'
+import { organs } from './consts'
 
-const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
+const PlantNetIdentifyForm = ({onIdentify, isLoading}: PlantNetIdentifyFormProps) => {
     const [organ, setOrgan] = useState<string>(Object.keys(organs)[0])
-    const [naturalType, setNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
     const [pictureFile, setPictureFile] = useState<File>()
     const [picturePreview, setPicturePreview] = useState<string>('')
 
@@ -25,10 +24,9 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
 
     const handleIdentify = () => {
         if (pictureFile) {
-                const identifyParams: IdentifyParams = {
+                const identifyParams: PlantNetIdentifyParams = {
                         pictureFile: pictureFile,
-                        organ: organ,
-                        naturalType: naturalType
+                        organ: organ
                 }
                 onIdentify(identifyParams)
         }
@@ -36,18 +34,6 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
 
     return (
         <>
-            <div className="organs">
-                {Object.entries(naturalTypes).map(([tag, nt]) => {
-                    return (
-                        <div className="organ" key={tag}
-                            style={{opacity: tag === naturalType ? 1 : 0.5}}
-                            onClick={() => setNaturalType(tag)}>
-                            <img src={nt.icon} width='50' />
-                            {nt.label}
-                        </div>
-                    )
-                })}
-            </div>
             <div className="pictures">
                 <div className="camera">
                     <button>
@@ -65,10 +51,10 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
                 </div>}
             </div>
 
-            <div className="organs">
+            <div className="things">
                 {Object.entries(organs).map(([oid, org]) => {
                     return (
-                        <div className="organ" key={oid}
+                        <div className="thing" key={oid}
                                 style={{opacity: oid === organ ? 1 : 0.5}}
                                 onClick={() => setOrgan(oid)}>
                             <img src={org.icon} width='50' />
@@ -85,4 +71,4 @@ const IdentifyForm = ({onIdentify, isLoading}: IdentifyFormProps) => {
     )
 }
 
-export default IdentifyForm    
+export default PlantNetIdentifyForm    

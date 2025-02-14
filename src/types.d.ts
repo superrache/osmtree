@@ -22,13 +22,12 @@ export type Organ = {
     label: string
   }
   
-export type IdentifyParams = {
+export type PlantNetIdentifyParams = {
     pictureFile: File
     organ: string
-    naturalType: string
 }
 
-export type IdentifyFormProps = {
+export type PlantNetIdentifyFormProps = {
     onIdentify: (params: IdentifyParams) => void
     isLoading: boolean
 }
