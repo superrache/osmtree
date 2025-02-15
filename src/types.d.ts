@@ -46,6 +46,7 @@ export type CandidateChoiceParams = {
     setCandidates: (candidates: PlantNetCandidate[]) => void
     localizedSpeciesKey: string
     naturalType: string
+    denotationType: string
 }
 
 export type AttributesTabParams = {
@@ -64,6 +65,11 @@ export type MapTabParams = {
 export type NaturalType = {
     icon: string
     color: string
+    label: string
+}
+
+export type DenotationType = {
+    icon: string
     label: string
 }
 

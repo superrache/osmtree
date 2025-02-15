@@ -1,3 +1,8 @@
+import noDenotationIcon from './assets/no.svg'
+import landmarkIcon from './assets/landmark.svg'
+import naturalMonumentIcon from './assets/monument.svg'
+import urbanIcon from './assets/street.svg'
+import agriculturalIcon from './assets/agriculture.svg'
 import naturalTreeIcon from './assets/natural_tree.svg'
 import naturalShrubIcon from './assets/natural_shrub.svg'
 import naturalPlantIcon from './assets/natural_plant.svg'
@@ -5,7 +10,7 @@ import leafImg from './assets/leaf.svg'
 import flowerImg from './assets/flower.svg'
 import fruitImg from './assets/fruit.svg'
 import barkImg from './assets/bark.svg'
-import { NaturalType, Organ } from './types'
+import { DenotationType, NaturalType, Organ } from './types'
 
 export const naturalTypes: Record<string, NaturalType> = {
     'tree': {
@@ -22,6 +27,29 @@ export const naturalTypes: Record<string, NaturalType> = {
         icon: naturalPlantIcon,
         color: '#7ce448',
         label: 'Herbacée'
+    }
+}
+
+export const denotationTypes: Record<string, DenotationType> = {
+    'no': {
+        icon: noDenotationIcon,
+        label: 'Aucun'
+    },
+    'landmark': {
+        icon: landmarkIcon,
+        label: 'Repère géographique'
+    },
+    'natural_monument': {
+        icon: naturalMonumentIcon,
+        label: 'Monument naturel'
+    },
+    'urban': {
+        icon: urbanIcon,
+        label: 'Urbain'
+    },
+    'agricultural': {
+        icon: agriculturalIcon,
+        label: 'Agricole'
     }
 }
 

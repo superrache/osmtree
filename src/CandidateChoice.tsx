@@ -5,15 +5,22 @@ import { SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 import { rgbaToHex } from './utils'
 
-const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, naturalType}: CandidateChoiceParams) => {
+const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, naturalType, denotationType}: CandidateChoiceParams) => {
     const selectedFeature = useContext(SelectedFeatureContext)
   
     if (candidates.length === 0) {
         return null
     }
 
+    // TODO: move this function in IdentifierTab
     const getOrCreateSelectedFeature = () => {
-        if (selectedFeature.value) return selectedFeature.value
+        if (selectedFeature.value) {
+            selectedFeature.value.editingProperties.modifyValue('natural', naturalType)
+            if (naturalType === 'tree' && denotationType !== 'no') {
+                selectedFeature.value.editingProperties.modifyValue('denotation', denotationType)
+            }
+            return selectedFeature.value
+        }
 
         const newFeature: GeoJSON.Feature = {
             id: selectedFeature.getNewId(),
@@ -27,6 +34,9 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
             }
         }
         const newEditingProperties = new EditingProperties(newFeature)
+        if (naturalType === 'tree' && denotationType !== 'no') {
+            newEditingProperties.modifyValue('denotation', denotationType)
+        }
         return {
             feature: newFeature,
             editingProperties: newEditingProperties
@@ -43,7 +53,6 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
                 // get the selected feature or create one
                 const sf = getOrCreateSelectedFeature()
                 // modify properties
-                sf.editingProperties.modifyValue('natural', naturalType)
                 if (candidate.localizedSpecies) sf.editingProperties.modifyValue(localizedSpeciesKey, candidate.localizedSpecies)
                 if (candidate.genus) sf.editingProperties.modifyValue('genus', candidate.genus)
                 if (candidate.species) sf.editingProperties.modifyValue('species', candidate.species)

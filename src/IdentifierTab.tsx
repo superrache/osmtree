@@ -5,7 +5,7 @@ import { PlantNetIdentifyParams, PlantNetCandidate } from './types'
 import CandidateChoice from './CandidateChoice'
 import { getApiUrl } from './utils'
 import { SelectedFeatureContext } from './contexts'
-import { naturalTypes } from './consts'
+import { denotationTypes, naturalTypes } from './consts'
 
 const IdentifierTab = () => {
     const maxResults = 12
@@ -16,18 +16,21 @@ const IdentifierTab = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [candidates, setCandidates] = useState<PlantNetCandidate[]>([])
     const [naturalType, setNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
+    const [denotationType, setDenotationType] = useState<string>(Object.keys(denotationTypes)[0])
 
     useEffect(() => {
         if (selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties) {
-            console.log('use effect identify', selectedFeature.value.feature.properties['natural'])
-            setNaturalType(selectedFeature.value.feature.properties['natural'])
+            setNaturalType(selectedFeature.value.feature.properties['natural']) // natural is required TODO: or from editingProperties
+            if (selectedFeature.value.feature.properties['denotation']) // denotation is optional
+                setDenotationType(selectedFeature.value.feature.properties['denotation']) // TODO: or from editingProperties
         } // else (no selection) let the last natural type selected
     }, [selectedFeature.value])
 
     const handleIdentify = async (params: PlantNetIdentifyParams) => {
         setIsLoading(true)
         setCandidates([])
-        setNaturalType(naturalType)
+        setNaturalType(naturalType) // TODO: remove?
+        setDenotationType(denotationType) // TODO: remove?
         try {
             // save current language to save result in the good osm key
             const lang = 'fr' // TODO: get user lang
@@ -107,6 +110,22 @@ const IdentifierTab = () => {
                 </div>
             </div>
 
+            { naturalType === 'tree' && <div className="identifier_group">
+                Dénotation
+                <div className="things">
+                    {Object.entries(denotationTypes).map(([tag, nt]) => {
+                        return (
+                            <div className="thing" key={tag}
+                                style={{opacity: tag === denotationType ? 1 : 0.5}}
+                                onClick={() => setDenotationType(tag)}>
+                                <img src={nt.icon} width='50' />
+                                {nt.label}
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>}
+
             <div className="identifier_group">
                 Identification Pl@ntNet
                 <PlantNetIdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
@@ -117,7 +136,8 @@ const IdentifierTab = () => {
                     candidates={candidates}
                     setCandidates={setCandidates}
                     localizedSpeciesKey={localizedSpeciesKey}
-                    naturalType={naturalType} />
+                    naturalType={naturalType}
+                    denotationType={denotationType} />
             </div>
         </div>
     )
