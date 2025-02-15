@@ -49,7 +49,7 @@ const App = () => {
     useEffect(() => {
         if (readyToSendFeatureCount !== osmConnection.editedFeatures.length) {
             setReadyToSendFeatureCount(osmConnection.editedFeatures.length)
-            tabs[3].notificationCount = osmConnection.editedFeatures.length
+            tabs[4].notificationCount = osmConnection.editedFeatures.length
             setTabs(tabs)
         }
     }, [osmConnection])
@@ -141,7 +141,7 @@ const App = () => {
             console.log('Authentication success')
             setTimeout(() => getOsmUserName(), 100)
             window.history.replaceState(null, '', window.location.href.replace(window.location.search, ""))
-            setActiveTab(3)
+            setActiveTab(4)
         })
     } else if (osmConnection.auth && osmConnection.auth.authenticated() && osmConnection.userName.length === 0) { // already connected at startup, just update username
         getOsmUserName()

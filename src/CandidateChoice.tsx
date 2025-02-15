@@ -3,6 +3,7 @@ import './CandidateChoice.css'
 import { useContext } from 'react'
 import { SelectedFeatureContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
+import { rgbaToHex } from './utils'
 
 const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, naturalType}: CandidateChoiceParams) => {
     const selectedFeature = useContext(SelectedFeatureContext)
@@ -65,11 +66,13 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
                     key={index}
                     onClick={() => onResultSelect(index)}>
                     <img className="result-image" v-if="result.imageUrl !== ''" src={candidate.imageUrl}/>
-                    <div className="result-info">
+                    <div className="result-info" style={{backgroundColor: rgbaToHex(Math.round(255 * (1 - candidate.score)), Math.round(255 * candidate.score), 0, 120)}}>
                         <div className="result-label-title">{ `${localizedSpeciesKey}=${candidate.localizedSpecies}` }</div>
                         <div>{ `genus=${candidate.genus}` }</div>
                         <div>{ `species=${candidate.species}` }</div>
-                        <div>{ `score: ${(Math.round(candidate.score * 1000) / 10)}%` }</div>
+                        <div className='score'>
+                            { `fiabilité: ${(Math.round(candidate.score * 1000) / 10)}%` }
+                        </div>
                     </div>
                 </div>
             ))}

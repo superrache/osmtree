@@ -83,28 +83,42 @@ const IdentifierTab = () => {
 
     return (
         <div className='identifier_tab'>
-            <div className="things">
-                {Object.entries(naturalTypes).map(([tag, nt]) => {
-                    return (
-                        <div className="thing" key={tag}
-                            style={{opacity: tag === naturalType ? 1 : 0.5}}
-                            onClick={() => setNaturalType(tag)}>
-                            <img src={nt.icon} width='50' />
-                            {nt.label}
-                        </div>
-                    )
-                })}
+            {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties && <div className='identifier_group identifier_selection_info'>
+                <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
+                    selectedFeature.value.feature.properties['species:fr'] 
+                    : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
+                    selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
+                <br/>
+                <span>{naturalTypes[selectedFeature.value.feature.properties['natural']].label}</span>
+            </div>}
+            <div className="identifier_group">
+                Type principal
+                <div className="things">
+                    {Object.entries(naturalTypes).map(([tag, nt]) => {
+                        return (
+                            <div className="thing" key={tag}
+                                style={{opacity: tag === naturalType ? 1 : 0.5}}
+                                onClick={() => setNaturalType(tag)}>
+                                <img src={nt.icon} width='50' />
+                                {nt.label}
+                            </div>
+                        )
+                    })}
+                </div>
             </div>
 
-            <PlantNetIdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
+            <div className="identifier_group">
+                Identification Pl@ntNet
+                <PlantNetIdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
 
-            { isLoading && <div>Identification en cours...</div>}
+                { isLoading && <div>Identification en cours...</div>}
 
-            <CandidateChoice
-                candidates={candidates}
-                setCandidates={setCandidates}
-                localizedSpeciesKey={localizedSpeciesKey}
-                naturalType={naturalType} />
+                <CandidateChoice
+                    candidates={candidates}
+                    setCandidates={setCandidates}
+                    localizedSpeciesKey={localizedSpeciesKey}
+                    naturalType={naturalType} />
+            </div>
         </div>
     )
 }

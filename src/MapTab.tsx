@@ -6,8 +6,8 @@ import crossImg from './assets/cross.svg'
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, LngLatLike } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds, getServerUrl } from './utils'
-import { DataResponse, MapTabParams } from './types'
+import { getBounds } from './utils'
+import { MapTabParams } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, SelectedFeatureContext } from './contexts'
@@ -94,10 +94,37 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const onMapLoad = () => {
         //console.log('onMapLoad')
         if (map && map.current) {
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener(
+                    "deviceorientation",
+                    function (event) {
+                      // alpha : rotation autour de l'axe z
+                      var rotateDegrees = event.alpha
+                      // gamma : de gauche à droite
+                      var leftToRight = event.gamma
+                      // bêta : mouvement avant-arrière
+                      var frontToBack = event.beta
+                      handleOrientationEvent(frontToBack, leftToRight, rotateDegrees)
+                    },
+                    true,
+                  )
+            }
+
             map.current.on('moveend', onMapMove)
             map.current.on('click', unselectFeature)
             // init map data
             onMapMove()
+        }
+    }
+
+    const handleOrientationEvent = (frontToBack, leftToRight, rotateDegrees) => {
+        if (map.current) {
+            let bearing = rotateDegrees
+            // fix portrait/landscape phone orientation
+            if (screen.orientation.type === 'landscape-primary') bearing -= 90
+            if (screen.orientation.type === 'landscape-secondary') bearing += 90
+            if (screen.orientation.type === 'portrait-secondary') bearing += 180
+            map.current.setBearing(bearing)
         }
     }
 
@@ -130,6 +157,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             if (feature.id && typeof feature.id === 'number') { // server must provide a feature.id with osm id
                 if (!(feature.id in featureMarkersCopy) && feature.properties && feature.properties.natural) {
                     const naturalType = naturalTypes[feature.properties.natural]
+                    if (naturalType === undefined) console.warn(feature.properties.natural)
                     const element = document.createElement('div')
                     element.className = 'feature-marker'
                     element.style.cssText = `background-color: ${naturalType.color}`

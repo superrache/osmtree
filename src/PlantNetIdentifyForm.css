@@ -6,10 +6,12 @@
   height: 50px;
   margin: 20px;
   position: relative;
+  margin-bottom: 25px;
 }
 
 .camera {
-  margin: 10px 0px;
+  margin-top: 0px;
+  margin-bottom: 10px;
 }
 
 #camera_input {
@@ -25,4 +27,10 @@
 
 .picture-preview {
   margin: 0px 10px;
+}
+
+.plantnet_mention {
+  text-align: center;
+  font-size: 0.7em;
+  color: grey;
 }

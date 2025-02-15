@@ -1,5 +1,3 @@
-import { DataResponse } from "./types"
-
 const instances = [
     'https://gall.openstreetmap.de',
     'https://lambert.openstreetmap.de',

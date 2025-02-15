@@ -7,6 +7,18 @@
   flex-direction: column;
 }
 
+.identifier_selection_info {
+  background-color: #353735;
+  color: white;
+  font-size: 1.2em;
+  padding: 5px;
+}
+
+.identifier_group {
+  border: #555 2px solid;
+  margin-bottom: 5px;
+}
+
 .things {
   display: flex;
   justify-content: center;
