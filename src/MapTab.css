@@ -5,6 +5,11 @@
     padding: 0;
 }
 
+.maplibregl-user-location-accuracy-circle {
+    pointer-events: none;
+    user-select: none;
+}
+
 .title {
     position: absolute;
     z-index: 500;
