@@ -94,3 +94,10 @@
     top: 50%;
     transform: translate(-50%, -50%);
 }
+
+.switch-auto-bearing {
+    position: absolute;
+    top: 175px;
+    right: 10px;
+    z-index: 7000;
+}

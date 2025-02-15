@@ -26,6 +26,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
+    const [autoBearing, setAutoBearing] = useState<boolean>(false)
 
     const lng = -1.374801
     const lat = 47.05353
@@ -94,37 +95,40 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const onMapLoad = () => {
         //console.log('onMapLoad')
         if (map && map.current) {
+            map.current.on('moveend', onMapMove)
+            map.current.on('click', unselectFeature)
+
             if (window.DeviceOrientationEvent) {
                 window.addEventListener(
                     "deviceorientation",
-                    function (event) {
-                      // alpha : rotation autour de l'axe z
-                      var rotateDegrees = event.alpha
-                      // gamma : de gauche à droite
-                      var leftToRight = event.gamma
-                      // bêta : mouvement avant-arrière
-                      var frontToBack = event.beta
-                      handleOrientationEvent(frontToBack, leftToRight, rotateDegrees)
-                    },
+                    handleOrientationEvent,
                     true,
                   )
             }
 
-            map.current.on('moveend', onMapMove)
-            map.current.on('click', unselectFeature)
             // init map data
             onMapMove()
         }
     }
 
-    const handleOrientationEvent = (frontToBack, leftToRight, rotateDegrees) => {
-        if (map.current) {
+    const switchAutoBearing = () => {
+        setAutoBearing(!autoBearing)
+    }
+
+    const handleOrientationEvent = (event) => {
+        if (map.current && autoBearing) {
+            // alpha : rotation autour de l'axe z
+            const rotateDegrees = event.alpha
+            // gamma : de gauche à droite
+            //const leftToRight = event.gamma
+            // bêta : mouvement avant-arrière
+            //const frontToBack = event.beta
             let bearing = rotateDegrees
             // fix portrait/landscape phone orientation
             if (screen.orientation.type === 'landscape-primary') bearing -= 90
             if (screen.orientation.type === 'landscape-secondary') bearing += 90
             if (screen.orientation.type === 'portrait-secondary') bearing += 180
-            map.current.setBearing(bearing)
+            if (Math.abs(bearing - map.current.getBearing()) > 1) map.current.setBearing(bearing)
         }
     }
 
@@ -298,6 +302,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             <a className="title">
                 <img src={logo} className="logo" alt="osmtree" />
                 osmtree
+                {map.current && <span> bearing {map.current.getBearing()}°</span>}
             </a>
             {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties && <div className='selection_info'>
                 <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
@@ -307,6 +312,15 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                 <br/>
                 <span>{naturalTypes[selectedFeature.value.feature.properties['natural']].label}</span>
             </div>}
+            { map.current && 
+                <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
+                    <button className='maplibregl-ctrl-compass'
+                        onClick={switchAutoBearing}
+                        style={{color: autoBearing ? 'blue' : 'grey'}}>
+                        B
+                    </button>
+                </div>
+            }
             { loading && <div className='loading'>Loading</div> }
             { !creatingPosition && <div className="creating-position-buttons">
                 <button className="creating-position-button" onClick={onAddButtonClick}>

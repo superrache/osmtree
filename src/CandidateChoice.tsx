@@ -18,6 +18,8 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
             selectedFeature.value.editingProperties.modifyValue('natural', naturalType)
             if (naturalType === 'tree' && denotationType !== 'no') {
                 selectedFeature.value.editingProperties.modifyValue('denotation', denotationType)
+            } else {
+                selectedFeature.value.editingProperties.deleteKey('denotation')
             }
             return selectedFeature.value
         }
