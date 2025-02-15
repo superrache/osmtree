@@ -8,8 +8,12 @@ const WikiTab = () => {
 
     useEffect(() => {
         if (selectedFeature.value !== null) {
-            let sp = selectedFeature.value.editingProperties.getValue('species')
-            if (sp === undefined) sp = selectedFeature.value.feature.properties ? selectedFeature.value.feature.properties['species'] : undefined
+            const sp = selectedFeature.value.editingProperties.getValue('species') 
+                        ?? selectedFeature.value.editingProperties.getValue('species:fr')
+                        ?? (selectedFeature.value.feature.properties ? 
+                                selectedFeature.value.feature.properties['species'] ?? selectedFeature.value.feature.properties['species:fr'] 
+                                : undefined
+                            )
             if (sp !== undefined) setSpecies(sp)
             else setSpecies('')
         } else {
