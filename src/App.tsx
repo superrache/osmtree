@@ -3,6 +3,7 @@ import './App.css'
 import mapImg from './assets/map.svg'
 import attributesImg from './assets/attributes.svg'
 import identifyImg from './assets/identify.svg'
+import imageImg from './assets/image.svg'
 import uploadImg from './assets/upload.svg'
 import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
@@ -15,6 +16,7 @@ import { osmAuth } from 'osm-auth'
 import OsmRequest from 'osm-request'
 import { osmConfig } from "./consts"
 import NotificationBadge from "./NotificationBadge"
+import WikiTab from "./WikiTab"
 
 const App = () => {
     const [activeTab, setActiveTab] = useState(0)
@@ -128,6 +130,7 @@ const App = () => {
         { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef}></MapTab> },
         { icon: attributesImg, label: 'Attributs', notificationCount: 0, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
         { icon: identifyImg, label: 'Identifier', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
+        { icon: imageImg, label: 'Wiki', notificationCount: 0, content: <WikiTab></WikiTab> },
         { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout}></UploadTab> }
     ])
 

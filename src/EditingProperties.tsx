@@ -82,6 +82,13 @@ export class EditingProperties {
         return this.props
     }
 
+    getValue(key: string): string | undefined {
+        for (const prop of this.props) {
+            if (prop.key === key) return prop.tag
+        }
+        return undefined
+    }
+
     getTagsToSend(): Record<string, string | number> {
         const tags: Record<string, string | number> = {}
         for (const prop of this.props) {
