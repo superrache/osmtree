@@ -111,10 +111,6 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }
 
-    const switchAutoBearing = () => {
-        setAutoBearing(!autoBearing)
-    }
-
     const handleOrientationEvent = (event) => {
         if (map.current && autoBearing) {
             // alpha : rotation autour de l'axe z
@@ -128,7 +124,9 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             if (screen.orientation.type === 'landscape-primary') bearing -= 90
             if (screen.orientation.type === 'landscape-secondary') bearing += 90
             if (screen.orientation.type === 'portrait-secondary') bearing += 180
-            if (Math.abs(bearing - map.current.getBearing()) > 1) map.current.setBearing(bearing)
+            if (Math.abs(bearing - map.current.getBearing()) > 1) {
+                map.current.setBearing(bearing).setPitch(45).setZoom(16)
+            }
         }
     }
 
@@ -315,7 +313,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             { map.current && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
                     <button className='maplibregl-ctrl-compass'
-                        onClick={switchAutoBearing}
+                        onClick={() => { setAutoBearing(!autoBearing) }}
                         style={{color: autoBearing ? 'blue' : 'grey'}}>
                         B
                     </button>
