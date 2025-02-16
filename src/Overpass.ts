@@ -1,3 +1,5 @@
+import { OverpassFeature, OverpassFeatureCollection } from "./types"
+
 const instances = [
     'https://gall.openstreetmap.de',
     'https://lambert.openstreetmap.de',
@@ -6,12 +8,12 @@ const instances = [
 ]
 
 const osmToPointFeatureCollection = (elements: any) => {
-    const features: Array<GeoJSON.Feature> = []
+    const features: Array<OverpassFeature> = []
 
     try {
         elements.forEach(function(e: any) {
             if(e.type === 'node' && e.hasOwnProperty('tags')) {
-                const feature: GeoJSON.Feature = {
+                const feature: OverpassFeature = {
                     type: "Feature",
                     geometry: {
                         type: "Point",
@@ -27,7 +29,7 @@ const osmToPointFeatureCollection = (elements: any) => {
         console.error(e)
     }
 
-    const geojson: GeoJSON.FeatureCollection = {
+    const geojson: OverpassFeatureCollection = {
         type: "FeatureCollection",
         features: features
     }

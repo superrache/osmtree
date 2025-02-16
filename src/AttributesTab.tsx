@@ -92,10 +92,10 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
     }
 
     const onValidate = () => {
-        if (selectedFeature.value !== null) {
+        if (selectedFeature.value !== null && selectedFeature.value.feature.id ) {
             // send the selected feature to osmConnection.editedFeatures
             const editedFeatures = osmConnection.value.editedFeatures
-            editedFeatures.push(selectedFeature.value)
+            editedFeatures[selectedFeature.value.feature.id] = selectedFeature.value
             osmConnection.setValue({
                 userName: osmConnection.value.userName,
                 auth: osmConnection.value.auth,
@@ -110,7 +110,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
     return (
         <div className="attributes_tab">
             <h2>Attributs</h2>
-            {!osmConnection.value.auth.authenticated() && selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties && <div>
+            {!osmConnection.value.auth.authenticated() && selectedFeature.value !== null && <div>
                 <table>
                     <thead><tr><th>Clé</th><th>=</th><th>Valeur</th></tr></thead>
                     {Object.entries(selectedFeature.value.feature.properties).map(([key, value]) => (

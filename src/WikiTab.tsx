@@ -10,10 +10,8 @@ const WikiTab = () => {
         if (selectedFeature.value !== null) {
             const sp = selectedFeature.value.editingProperties.getValue('species') 
                         ?? selectedFeature.value.editingProperties.getValue('species:fr')
-                        ?? (selectedFeature.value.feature.properties ? 
-                                selectedFeature.value.feature.properties['species'] ?? selectedFeature.value.feature.properties['species:fr'] 
-                                : undefined
-                            )
+                        ?? selectedFeature.value.feature.properties['species'] 
+                        ?? selectedFeature.value.feature.properties['species:fr']
             if (sp !== undefined) setSpecies(sp)
             else setSpecies('')
         } else {

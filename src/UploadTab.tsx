@@ -1,15 +1,17 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import './UploadTab.css'
-import { FeatureMarkersContext, OSMConnectionContext } from './contexts'
+import { FeatureMarkersContext, OSMConnectionContext, SelectedFeatureContext } from './contexts'
 import { UploadTabParams } from './types'
 import { naturalTypes } from './consts'
 
 const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const osmConnection = useContext(OSMConnectionContext)
     const featureMarkers = useContext(FeatureMarkersContext)
+    const selectedFeature = useContext(SelectedFeatureContext)
+
     const [comment, setComment] = useState<string>('')
     const [logs, setLogs] = useState<string[]>([])
-    const [lastChangesetId, setLastChangesetId] = useState<string>()
+    const [lastChangesetId, setLastChangesetId] = useState<number>(0)
     const logContainerRef = useRef(null)
 
     const commentChanged = (event) => {
@@ -32,25 +34,26 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
         // generate a comment from editedFeatures
         let news = 0, updates = 0
         const typeNames = new Set()
-        for (const feature of osmConnection.value.editedFeatures) {
-            if (parseInt(`${feature.feature.id}`) < 0) news++
+        for (const feature of Object.values(osmConnection.value.editedFeatures)) {
+            if (feature.feature.id < 0) news++
             else updates++
-            if (feature.feature.properties && feature.feature.properties.natural && feature.feature.properties.natural in naturalTypes) {
+            if (feature.feature.properties.natural && feature.feature.properties.natural in naturalTypes) {
                 typeNames.add(naturalTypes[feature.feature.properties.natural].label.toLowerCase())
             }
         }
         if (news > 0 || updates > 0) {
             let changeType = news > 0 ? 'ajout' : ''
             changeType += updates > 0 ? `${changeType.length > 0 ? ' /' : ''} mise à jour` : ''
-            const plurial = osmConnection.value.editedFeatures.length > 1
+            const featureCount = Object.keys(osmConnection.value.editedFeatures).length
+            const plurial = featureCount > 1
             const names = Array.from(typeNames).join(plurial ? 's, ' : ', ') + (plurial ? 's' : '')
-            setComment(`${changeType} de ${osmConnection.value.editedFeatures.length} ${names}`)    
+            setComment(`${changeType} de ${featureCount} ${names}`)    
         }
     }, [osmConnection.value])
 
     const onSend = async () => {
         resetLogs()
-        appendLog(`Envoi de ${osmConnection.value.editedFeatures.length} élément(s) vers OpenStreetMap`)
+        appendLog(`Envoi de ${Object.keys(osmConnection.value.editedFeatures).length} élément(s) vers OpenStreetMap`)
         const osmRequest = osmConnection.value.osmRequest
 
         const changesetId = await osmRequest.createChangeset('osmtree', comment)
@@ -58,11 +61,11 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
 
         const newMarkers = featureMarkers.value
 
-        for (const feature of osmConnection.value.editedFeatures) {
+        for (const feature of Object.values(osmConnection.value.editedFeatures)) {
             if (feature.feature.id) {
                 const id = feature.feature.id
                 appendLog(`Elément ${id}`)
-                const isNew = parseInt(`${id}`) < 0
+                const isNew = id < 0
                 const newPosition = feature.editingProperties.getNewPosition() // LngLat or undefined
                 const coordsLatLng = newPosition !== undefined ? [newPosition.lat, newPosition.lng] : [0, 0]
                 const tags = feature.editingProperties.getTagsToSend() // only new/modified/unmodified not empty tags
@@ -102,12 +105,17 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
         // reset data by setting empty editedFeatures...
         osmConnection.setValue({
             userName: osmConnection.value.userName,
-            editedFeatures: [],
+            editedFeatures: {},
             auth: osmConnection.value.auth,
             osmRequest: osmRequest
         })
         // ...and updating features
         featureMarkers.setValue(newMarkers)
+    }
+
+    const onEditedFeatureClick = (id: number) => {
+        const feature = osmConnection.value.editedFeatures[id]
+        selectedFeature.setValue(feature)
     }
 
     return (
@@ -127,10 +135,10 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 <br/>
                 <br/>
                 Eléments prêts à être envoyés :
-                {osmConnection.value.editedFeatures.length === 0 && <div>Aucun</div>}
-                {osmConnection.value.editedFeatures.length > 0 && <ul>
-                    {osmConnection.value.editedFeatures.map((feature, index) => {
-                        return <li key={index}><a>{feature.feature.properties!.natural} {feature.feature.id}</a></li>
+                {Object.keys(osmConnection.value.editedFeatures).length === 0 && <div>Aucun</div>}
+                {Object.keys(osmConnection.value.editedFeatures).length > 0 && <ul>
+                    {Object.values(osmConnection.value.editedFeatures).map((feature, index) => {
+                        return <li key={index} onClick={() => onEditedFeatureClick(feature.feature.id)}><a>{feature.feature.properties.natural} {feature.feature.id}</a></li>
                     })}
                 </ul>}
                 <br/>
@@ -140,7 +148,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                     value={comment}
                     placeholder='commentaire du groupe de modification'/>
                 <button
-                    disabled={osmConnection.value.editedFeatures.length === 0 || comment.length === 0}
+                    disabled={Object.keys(osmConnection.value.editedFeatures).length === 0 || comment.length === 0}
                     onClick={onSend}
                 >
                     Envoyer à OpenStreetMap
@@ -155,7 +163,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                     </div>
                     ))}
                 </div>
-                {lastChangesetId && lastChangesetId.length > 0 && <div>
+                {lastChangesetId > 0 && <div>
                     Dernier groupe de modification envoyé : <a href={`https://www.openstreetmap.org/changeset/${lastChangesetId}`}>{lastChangesetId}</a>
                 </div>}
                 <br/>

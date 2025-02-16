@@ -3,11 +3,11 @@ import logo from '/osmtree.svg' // also favicon
 import confirmImg from './assets/confirm.svg'
 import cancelImg from './assets/cancel.svg'
 import crossImg from './assets/cross.svg'
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, LngLatLike } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds } from './utils'
-import { MapTabParams } from './types'
+import { MapTabParams, OverpassFeature } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, SelectedFeatureContext } from './contexts'
@@ -152,36 +152,34 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }
 
-    const loadFeatures = (features: GeoJSON.Feature[]) => {
+    const loadFeatures = (features: OverpassFeature[]) => {
         console.log(`loadFeatures with ${features.length} features`)
         const featureMarkersCopy = featureMarkers.value
         for (const feature of features) {
-            if (feature.id && typeof feature.id === 'number') { // server must provide a feature.id with osm id
-                if (!(feature.id in featureMarkersCopy) && feature.properties && feature.properties.natural) {
-                    const naturalType = naturalTypes[feature.properties.natural]
-                    if (naturalType === undefined) console.warn(feature.properties.natural)
-                    const element = document.createElement('div')
-                    element.className = 'feature-marker'
-                    element.style.cssText = `background-color: ${naturalType.color}`
-                    const icon = document.createElement('img')
-                    icon.src = naturalType.icon
-                    icon.style.cssText = 'width: 14px;'
-                    element.appendChild(icon)
-                    // add this feature as a marker
-                    const featureMarker = new FeatureMarker(feature, {
-                        element: element,
-                        clickTolerance: 2
-                    })
-                    if (feature.geometry.type === 'Point' && map.current) {
-                        featureMarker.setLngLat([feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
-                        featureMarker.addTo(map.current)
+            if (!(feature.id in featureMarkersCopy) && feature.properties.natural) {
+                const naturalType = naturalTypes[feature.properties.natural]
+                if (naturalType === undefined) console.warn(feature.properties.natural)
+                const element = document.createElement('div')
+                element.className = 'feature-marker'
+                element.style.cssText = `background-color: ${naturalType.color}`
+                const icon = document.createElement('img')
+                icon.src = naturalType.icon
+                icon.style.cssText = 'width: 14px;'
+                element.appendChild(icon)
+                // add this feature as a marker
+                const featureMarker = new FeatureMarker(feature, {
+                    element: element,
+                    clickTolerance: 2
+                })
+                if (map.current) {
+                    featureMarker.setLngLat([feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
+                    featureMarker.addTo(map.current)
 
-                        element.addEventListener('click', (e) => {
-                            selectFeature(feature.id, undefined)
-                            e.stopPropagation() // pour ne pas cliquer en plus sur la potentielle layer sous le marker
-                        })
-                        featureMarkersCopy[feature.id] = featureMarker
-                    }
+                    element.addEventListener('click', (e) => {
+                        selectFeature(feature.id, undefined)
+                        e.stopPropagation() // pour ne pas cliquer en plus sur la potentielle layer sous le marker
+                    })
+                    featureMarkersCopy[feature.id] = featureMarker
                 }
             }
         }
@@ -189,7 +187,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         setLoading(false)
     }
 
-    const selectFeature = (id: string | number | undefined, editingProperties: EditingProperties | undefined) => {
+    const selectFeature = (id: number | undefined, editingProperties: EditingProperties | undefined) => {
         // unselect current feature unless editingProperties is given
         if (editingProperties === undefined) unselectFeature()
         // select the feature marker
@@ -256,7 +254,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                 loadFeatures([feature])
                 selectFeature(feature.id, editingProperties)
             } else { // create a new feature and select it
-                const feature: GeoJSON.Feature = {
+                const feature: OverpassFeature = {
                     id: selectedFeature.getNewId(),
                     type: 'Feature',
                     geometry: pointGeom,
@@ -302,7 +300,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                 osmtree
                 {map.current && <span> bearing {map.current.getBearing()}°</span>}
             </a>
-            {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties && <div className='selection_info'>
+            {selectedFeature.value !== null && <div className='selection_info'>
                 <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
                     selectedFeature.value.feature.properties['species:fr'] 
                     : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 

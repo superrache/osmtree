@@ -19,7 +19,7 @@ const IdentifierTab = () => {
     const [denotationType, setDenotationType] = useState<string>(Object.keys(denotationTypes)[0])
 
     useEffect(() => {
-        if (selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties) {
+        if (selectedFeature.value !== null) {
             setNaturalType(selectedFeature.value.feature.properties['natural']) // natural is required TODO: or from editingProperties
             if (selectedFeature.value.feature.properties['denotation']) // denotation is optional
                 setDenotationType(selectedFeature.value.feature.properties['denotation']) // TODO: or from editingProperties
@@ -86,7 +86,7 @@ const IdentifierTab = () => {
 
     return (
         <div className='identifier_tab'>
-            {selectedFeature.value && selectedFeature.value.feature && selectedFeature.value.feature.properties && <div className='identifier_group identifier_selection_info'>
+            {selectedFeature.value !== null && <div className='identifier_group identifier_selection_info'>
                 <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
                     selectedFeature.value.feature.properties['species:fr'] 
                     : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
@@ -139,6 +139,17 @@ const IdentifierTab = () => {
                     naturalType={naturalType}
                     denotationType={denotationType} />
             </div>
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+            osmtree
+            <br/>
+            <br/>
+            <br/>
+            <br/>
+            <br/>
         </div>
     )
 }

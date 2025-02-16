@@ -10,7 +10,7 @@ export const SelectedFeatureContext = createContext<SelectedFeatureContextValue>
 
 export const FeatureMarkersContext = createContext<FeatureMarkersValue>({
     value: {},
-    setValue: (_: Record<string, FeatureMarker>) => {},
+    setValue: (_: Record<number, FeatureMarker>) => {}
 })
 
 export const MapContext = createContext<MapContextValue>({
@@ -23,7 +23,7 @@ export const OSMConnectionContext = createContext<OSMConnectionContextValue>({
         userName: '',
         auth: null,
         osmRequest: null,
-        editedFeatures: []
+        editedFeatures: {}
     },
     setValue: (_: OSMConnection) => {}
 })

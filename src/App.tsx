@@ -21,13 +21,13 @@ import WikiTab from "./WikiTab"
 const App = () => {
     const [activeTab, setActiveTab] = useState(0)
     const [selectedFeature, setSelectedFeature] = useState<SelectedFeature>(null)
-    const [featureMarkers, setFeatureMarkers] = useState<Record<string, FeatureMarker>>({})
+    const [featureMarkers, setFeatureMarkers] = useState<Record<number, FeatureMarker>>({})
     const [mapBounds, setMapBounds] = useState<string>('0,0,0,0')
     const [osmConnection, setOsmConnection] = useState<OSMConnection>({
         userName: '',
         auth: osmAuth(osmConfig),
         osmRequest: new OsmRequest(osmConfig),
-        editedFeatures: []
+        editedFeatures: {}
     })
     const [currentId, setCurrentId] = useState<number>(-1)
 
@@ -47,9 +47,10 @@ const App = () => {
     }, [selectedFeature])
 
     useEffect(() => {
-        if (readyToSendFeatureCount !== osmConnection.editedFeatures.length) {
-            setReadyToSendFeatureCount(osmConnection.editedFeatures.length)
-            tabs[4].notificationCount = osmConnection.editedFeatures.length
+        const featureCount = Object.keys(osmConnection.editedFeatures).length
+        if (readyToSendFeatureCount !== featureCount) {
+            setReadyToSendFeatureCount(featureCount)
+            tabs[4].notificationCount = featureCount
             setTabs(tabs)
         }
     }, [osmConnection])

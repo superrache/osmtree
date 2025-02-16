@@ -73,8 +73,20 @@ export type DenotationType = {
     label: string
 }
 
+export type OverpassFeature = {
+    type: "Feature";
+    id: number // difference with maplibregl GeoJSON.Feature string | number | undefined
+    geometry: GeoJSON.Point // always type Point
+    properties: Record<string, string>
+}
+
+export type OverpassFeatureCollection = {
+    type: 'FeatureCollection'
+    features: OverpassFeature[]
+}
+
 export type EditableFeature = {
-    feature: GeoJSON.Feature
+    feature: OverpassFeature
     editingProperties: EditingProperties
 }
 
@@ -87,8 +99,8 @@ export type SelectedFeatureContextValue = {
 }
 
 export type FeatureMarkersValue = {
-    value: Record<string, FeatureMarker>
-    setValue: (_: Record<string, FeatureMarker>) => void
+    value: Record<number, FeatureMarker>
+    setValue: (_: Record<number, FeatureMarker>) => void
 }
 
 export type MapContextValue = {
@@ -100,7 +112,7 @@ export type OSMConnection = {
     userName: string
     auth: any | null
     osmRequest: any | null
-    editedFeatures: EditableFeature[]
+    editedFeatures: Record<number, EditableFeature>
 }
 
 export type OSMConnectionContextValue = {

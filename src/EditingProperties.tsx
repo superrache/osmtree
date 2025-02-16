@@ -1,4 +1,5 @@
 import { LngLat } from "maplibre-gl"
+import { OverpassFeature } from "./types"
 
 export type EditingProperty = {
     key: string
@@ -10,18 +11,16 @@ export class EditingProperties {
     props: EditingProperty[]
     newPosition: LngLat | undefined
 
-    constructor(feature: GeoJSON.Feature) {
+    constructor(feature: OverpassFeature) {
         this.props = []
-        if (feature.properties) {
-            for (const [key, value] of Object.entries(feature.properties)) {
-                this.props.push({
-                    key: key,
-                    tag: value,
-                    status: 'unmodified'
-                })
-            }
-            this.props.push({key: '', tag: '', status: 'new'})
+        for (const [key, value] of Object.entries(feature.properties)) {
+            this.props.push({
+                key: key,
+                tag: value,
+                status: 'unmodified'
+            })
         }
+        this.props.push({key: '', tag: '', status: 'new'})
         this.newPosition = undefined
     }
 
