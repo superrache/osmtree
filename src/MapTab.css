@@ -101,3 +101,10 @@
     right: 10px;
     z-index: 7000;
 }
+
+.switch-map-style {
+    position: absolute;
+    top: 224px;
+    right: 10px;
+    z-index: 7000;
+}

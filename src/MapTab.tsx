@@ -3,6 +3,7 @@ import logo from '/osmtree.svg' // also favicon
 import confirmImg from './assets/confirm.svg'
 import cancelImg from './assets/cancel.svg'
 import crossImg from './assets/cross.svg'
+import layersImg from './assets/layers.svg'
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
@@ -27,6 +28,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
     const [autoBearing, setAutoBearing] = useState<boolean>(false)
+    const [mapStyle, setMapStyle] = useState<boolean>(false)
 
     const lng = -1.374801
     const lat = 47.05353
@@ -289,6 +291,18 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         zoomFocus(18, true)
     }
 
+    const switchMapStyle = () => {
+        const newMapStyle = !mapStyle
+        if (map.current) {
+            if (newMapStyle) {
+                map.current.setStyle('https://api.jawg.io/styles/77df562c-113e-451b-bc77-1634aedeee25.json?access-token=UG9wQV1RcEgsXwkTX9M9qfBUV0ZckAfUhlqa3W4hK16gVbTFDUSMXrn60H1hEE6d')
+            } else {
+                map.current.setStyle(orthoStyle)
+            }
+        }
+        setMapStyle(newMapStyle)
+    }
+
     if (mapTabRef) {
         mapTabRef.current = onLocateFeature
     }
@@ -314,6 +328,15 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                         onClick={() => { setAutoBearing(!autoBearing) }}
                         style={{color: autoBearing ? 'blue' : 'grey'}}>
                         B
+                    </button>
+                </div>
+            }
+            { map.current && 
+                <div className='maplibregl-ctrl maplibregl-ctrl-group switch-map-style'>
+                    <button className='maplibregl-ctrl-compass'
+                        onClick={switchMapStyle}
+                        style={{border: mapStyle ? '2px solid #ff9454' : 'none'}}>
+                        <img src={layersImg} width='15' />
                     </button>
                 </div>
             }
