@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import './UploadTab.css'
 import { FeatureMarkersContext, OSMConnectionContext, SelectedFeatureContext } from './contexts'
 import { UploadTabParams } from './types'
@@ -14,7 +14,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const [lastChangesetId, setLastChangesetId] = useState<number>(0)
     const logContainerRef = useRef(null)
 
-    const commentChanged = (event) => {
+    const commentChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
         setComment(event.target.value)
     }
 
@@ -164,7 +164,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                     ))}
                 </div>
                 {lastChangesetId > 0 && <div>
-                    Dernier groupe de modification envoyé : <a href={`https://www.openstreetmap.org/changeset/${lastChangesetId}`}>{lastChangesetId}</a>
+                    Dernier groupe de modification envoyé : <a href={`https://www.openstreetmap.org/changeset/${lastChangesetId}`} target='blank'>{lastChangesetId}</a>
                 </div>}
                 <br/>
                 <br/>

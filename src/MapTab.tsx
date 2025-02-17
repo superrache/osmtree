@@ -113,10 +113,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }
 
-    const handleOrientationEvent = (event) => {
+    const handleOrientationEvent = (event: DeviceOrientationEvent) => {
         if (map.current && autoBearing) {
             // alpha : rotation autour de l'axe z
-            const rotateDegrees = event.alpha
+            const rotateDegrees = event.alpha !== null ? event.alpha : 0
             // gamma : de gauche à droite
             //const leftToRight = event.gamma
             // bêta : mouvement avant-arrière

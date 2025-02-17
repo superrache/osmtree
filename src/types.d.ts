@@ -45,8 +45,7 @@ export type CandidateChoiceParams = {
     candidates: PlantNetCandidate[]
     setCandidates: (candidates: PlantNetCandidate[]) => void
     localizedSpeciesKey: string
-    naturalType: string
-    denotationType: string
+    handleSelectCandidate: (props: Record<string, string>) => void
 }
 
 export type AttributesTabParams = {
@@ -68,7 +67,14 @@ export type NaturalType = {
     label: string
 }
 
-export type DenotationType = {
+export type Combination = {
+    label: string
+    key: string
+    natural: string[]
+    values: Record<string, CombinationValue>
+}
+
+export type CombinationValue = {
     icon: string
     label: string
 }

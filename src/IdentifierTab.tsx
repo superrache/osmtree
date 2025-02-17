@@ -1,11 +1,12 @@
 import { useContext, useEffect, useState } from 'react'
 import './IdentifierTab.css'
 import PlantNetIdentifyForm from './PlantNetIdentifyForm'
-import { PlantNetIdentifyParams, PlantNetCandidate } from './types'
+import { PlantNetIdentifyParams, PlantNetCandidate, OverpassFeature } from './types'
 import CandidateChoice from './CandidateChoice'
 import { getApiUrl } from './utils'
 import { SelectedFeatureContext } from './contexts'
-import { denotationTypes, naturalTypes } from './consts'
+import { combinations, naturalTypes } from './consts'
+import { EditingProperties } from './EditingProperties'
 
 const IdentifierTab = () => {
     const maxResults = 12
@@ -16,21 +17,54 @@ const IdentifierTab = () => {
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [candidates, setCandidates] = useState<PlantNetCandidate[]>([])
     const [naturalType, setNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
-    const [denotationType, setDenotationType] = useState<string>(Object.keys(denotationTypes)[0])
+    const [selectedCombinations, setSelectedCombinations] = useState<Record<string, string>>({})
 
     useEffect(() => {
         if (selectedFeature.value !== null) {
-            setNaturalType(selectedFeature.value.feature.properties['natural']) // natural is required TODO: or from editingProperties
-            if (selectedFeature.value.feature.properties['denotation']) // denotation is optional
-                setDenotationType(selectedFeature.value.feature.properties['denotation']) // TODO: or from editingProperties
-        } // else (no selection) let the last natural type selected
+            const natType = selectedFeature.value.feature.properties['natural'] // natural is required
+            // select the natural type
+            setNaturalType(natType)
+            // update combinations types from selected feature editing properties
+            const newSelectedCombinations: Record<string, string> = {}
+            for (const [key, combination] of Object.entries(combinations)) {
+                if (combination.natural.includes(natType)) {
+                    newSelectedCombinations[key] = Object.keys(combination.values)[0] // none
+                    const val = selectedFeature.value.editingProperties.getValue(key)
+                    if (val && val in combination.values) newSelectedCombinations[key] = val
+                }
+            }
+            setSelectedCombinations(newSelectedCombinations)
+        } else { // else (no selection) let the last natural type selected
+            const newSelectedCombinations: Record<string, string> = {}
+            for (const [key, combination] of Object.entries(combinations)) {
+                if (combination.natural.includes(naturalType)) {
+                    newSelectedCombinations[key] = Object.keys(combination.values)[0] // none
+                }
+            }
+            setSelectedCombinations(newSelectedCombinations)
+        }
     }, [selectedFeature.value])
+
+    useEffect(() => {
+        if (selectedFeature.value !== null) {
+            const editingProperties = selectedFeature.value.editingProperties
+            const oldProps = structuredClone(editingProperties.props)
+            for (const [key, tag] of Object.entries(selectedCombinations)) {
+                if (tag === 'none') editingProperties.deleteKey(key)
+                else editingProperties.modifyValue(key, tag)
+            }
+            if (JSON.stringify(editingProperties.props) !== JSON.stringify(oldProps)) { // props modified? need update
+                selectedFeature.setValue({
+                    feature: selectedFeature.value.feature,
+                    editingProperties: editingProperties
+                })
+            }
+        }
+    }, [selectedCombinations])
 
     const handleIdentify = async (params: PlantNetIdentifyParams) => {
         setIsLoading(true)
         setCandidates([])
-        setNaturalType(naturalType) // TODO: remove?
-        setDenotationType(denotationType) // TODO: remove?
         try {
             // save current language to save result in the good osm key
             const lang = 'fr' // TODO: get user lang
@@ -84,6 +118,53 @@ const IdentifierTab = () => {
         }
     }
 
+    const getOrCreateSelectedFeature = () => {
+        if (selectedFeature.value !== null) return selectedFeature.value
+
+        const newFeature: OverpassFeature = {
+            id: selectedFeature.getNewId(),
+            type: 'Feature',
+            geometry: {
+                type: 'Point',
+                coordinates: [0, 0]
+            },
+            properties: {
+                natural: naturalType
+            }
+        }
+        const newEditingProperties = new EditingProperties(newFeature)
+        return {
+            feature: newFeature,
+            editingProperties: newEditingProperties
+        }
+    }
+
+    const handleSelectCandidate = (props: Record<string, string>) => {
+        // get the selected feature or create one
+        const sf = getOrCreateSelectedFeature()
+
+        // update from type selectors
+        sf.editingProperties.modifyValue('natural', naturalType)
+        for (const combination of Object.values(combinations)) {
+            if (combination.natural.includes(naturalType)) {
+                sf.editingProperties.modifyValue(combination.key, selectedCombinations[combination.key])
+            } else {
+                sf.editingProperties.deleteKey(combination.key)
+            }
+        }
+
+        // update from candidates props
+        for (const [key, tag] of Object.entries(props)) {
+            sf.editingProperties.modifyValue(key, tag)
+        }
+
+        // set the value to update in every component
+        selectedFeature.setValue({
+            feature: sf.feature,
+            editingProperties: sf.editingProperties
+        })
+    }
+
     return (
         <div className='identifier_tab'>
             {selectedFeature.value !== null && <div className='identifier_group identifier_selection_info'>
@@ -93,6 +174,8 @@ const IdentifierTab = () => {
                     selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
                 <br/>
                 <span>{naturalTypes[selectedFeature.value.feature.properties['natural']].label}</span>
+                <br/>
+                <span>{naturalType}</span>
             </div>}
             <div className="identifier_group">
                 Type principal
@@ -110,21 +193,28 @@ const IdentifierTab = () => {
                 </div>
             </div>
 
-            { naturalType === 'tree' && <div className="identifier_group">
-                Dénotation
-                <div className="things">
-                    {Object.entries(denotationTypes).map(([tag, nt]) => {
-                        return (
-                            <div className="thing" key={tag}
-                                style={{opacity: tag === denotationType ? 1 : 0.5}}
-                                onClick={() => setDenotationType(tag)}>
-                                <img src={nt.icon} width='50' />
-                                {nt.label}
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>}
+            { Object.entries(combinations).map(([key, combination]) => {
+                return (
+                    combination.natural.includes(naturalType) && <div className="identifier_group">
+                        {combination.label}
+                        <div className='things' key={key}>
+                            {Object.entries(combination.values).map(([tag, cbVal]) => {
+                                return (
+                                    <div className="thing" key={tag}
+                                        style={{opacity: key in selectedCombinations && tag === selectedCombinations[key] ? 1 : 0.5}}
+                                        onClick={() => {
+                                            const selectedCombinationsCopy = structuredClone(selectedCombinations)
+                                            selectedCombinationsCopy[key] = tag
+                                            setSelectedCombinations(selectedCombinationsCopy)
+                                        }}>
+                                        <img src={cbVal.icon} width='50' />
+                                        {cbVal.label}
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>)
+            })}
 
             <div className="identifier_group">
                 Identification Pl@ntNet
@@ -136,8 +226,7 @@ const IdentifierTab = () => {
                     candidates={candidates}
                     setCandidates={setCandidates}
                     localizedSpeciesKey={localizedSpeciesKey}
-                    naturalType={naturalType}
-                    denotationType={denotationType} />
+                    handleSelectCandidate={handleSelectCandidate} />
             </div>
             <br/>
             <br/>

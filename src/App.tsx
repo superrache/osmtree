@@ -37,11 +37,9 @@ const App = () => {
 
     useEffect(() => {
         console.log('APP: selectedFeature updated', selectedFeature !== null ? selectedFeature.feature.id : null)
-        if (selectedFeature && selectedFeature.editingProperties) {
-            tabs[1].notificationCount = selectedFeature.editingProperties.getChangedCount()
-            setTabs(Array.from(tabs))
-        } else {
-            tabs[1].notificationCount = 0
+        const attrCount = (selectedFeature !== null && selectedFeature.editingProperties) ? selectedFeature.editingProperties.getChangedCount() : 0
+        if (attrCount !== tabs[1].notificationCount) {
+            tabs[1].notificationCount = attrCount
             setTabs(Array.from(tabs))
         }
     }, [selectedFeature])
@@ -130,7 +128,7 @@ const App = () => {
     const [tabs, setTabs] = useState<Tab[]>([
         { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef}></MapTab> },
         { icon: attributesImg, label: 'Attributs', notificationCount: 0, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
-        { icon: identifyImg, label: 'Identifier', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
+        { icon: identifyImg, label: 'Assistant', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
         { icon: imageImg, label: 'Wiki', notificationCount: 0, content: <WikiTab></WikiTab> },
         { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout}></UploadTab> }
     ])

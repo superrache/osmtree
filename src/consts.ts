@@ -1,4 +1,4 @@
-import noDenotationIcon from './assets/no.svg'
+import noneImg from './assets/no.svg'
 import landmarkIcon from './assets/landmark.svg'
 import naturalMonumentIcon from './assets/monument.svg'
 import urbanIcon from './assets/street.svg'
@@ -10,7 +10,7 @@ import leafImg from './assets/leaf.svg'
 import flowerImg from './assets/flower.svg'
 import fruitImg from './assets/fruit.svg'
 import barkImg from './assets/bark.svg'
-import { DenotationType, NaturalType, Organ } from './types'
+import { Combination, NaturalType, Organ } from './types'
 
 export const naturalTypes: Record<string, NaturalType> = {
     'tree': {
@@ -30,26 +30,79 @@ export const naturalTypes: Record<string, NaturalType> = {
     }
 }
 
-export const denotationTypes: Record<string, DenotationType> = {
-    'no': {
-        icon: noDenotationIcon,
-        label: 'Aucun'
+export const combinations: Record<string, Combination> = {
+    'denotation': {
+        label: 'Dénotation',
+        key: 'denotation',
+        natural: ['tree'],
+        values: {
+            'none': {
+                icon: noneImg,
+                label: 'Aucun'
+            },
+            'landmark': {
+                icon: landmarkIcon,
+                label: 'Repère géographique'
+            },
+            'natural_monument': {
+                icon: naturalMonumentIcon,
+                label: 'Monument naturel'
+            },
+            'urban': {
+                icon: urbanIcon,
+                label: 'Urbain'
+            },
+            'agricultural': {
+                icon: agriculturalIcon,
+                label: 'Agricole'
+            }
+        }
     },
-    'landmark': {
-        icon: landmarkIcon,
-        label: 'Repère géographique'
+    'leaf_type': {
+        label: 'Type de feuille',
+        key: 'leaf_type',
+        natural: ['tree', 'shrub'],
+        values: {
+            'none': {
+                label: 'Non renseigné',
+                icon: noneImg
+            },
+            'broadleaved': {
+                label: 'Feuilles',
+                icon: agriculturalIcon
+            },
+            'needleleaved': {
+                label: 'Aiguilles',
+                icon: agriculturalIcon
+            },
+            'leafless': {
+                label: 'Sans feuille',
+                icon: agriculturalIcon
+            }
+        }
     },
-    'natural_monument': {
-        icon: naturalMonumentIcon,
-        label: 'Monument naturel'
-    },
-    'urban': {
-        icon: urbanIcon,
-        label: 'Urbain'
-    },
-    'agricultural': {
-        icon: agriculturalIcon,
-        label: 'Agricole'
+    'leaf_cycle': {
+        label: 'Phénologie',
+        key: 'leaf_cycle',
+        natural: ['tree', 'shrub', 'plant'],
+        values: {
+            'none': {
+                label: 'Non renseigné',
+                icon: noneImg
+            },
+            'evergreen': {
+                label: 'Persistant',
+                icon: agriculturalIcon
+            },
+            'deciduous': {
+                label: 'Caduque',
+                icon: agriculturalIcon
+            },
+            'semi_evergreen': {
+                label: 'Semi-persistant',
+                icon: agriculturalIcon
+            }
+        }
     }
 }
 

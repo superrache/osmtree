@@ -68,7 +68,7 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
     }
 
     const escape = () => {
-        setSuggestions([]);
+        setSuggestions([])
     }
 
     const blur = () => {

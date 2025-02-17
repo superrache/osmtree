@@ -1,48 +1,10 @@
 import { CandidateChoiceParams, PlantNetCandidate } from './types'
 import './CandidateChoice.css'
-import { useContext } from 'react'
-import { SelectedFeatureContext } from './contexts'
-import { EditingProperties } from './EditingProperties'
 import { rgbaToHex } from './utils'
 
-const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, naturalType, denotationType}: CandidateChoiceParams) => {
-    const selectedFeature = useContext(SelectedFeatureContext)
-  
+const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, handleSelectCandidate}: CandidateChoiceParams) => {  
     if (candidates.length === 0) {
         return null
-    }
-
-    // TODO: move this function in IdentifierTab
-    const getOrCreateSelectedFeature = () => {
-        if (selectedFeature.value) {
-            selectedFeature.value.editingProperties.modifyValue('natural', naturalType)
-            if (naturalType === 'tree' && denotationType !== 'no') {
-                selectedFeature.value.editingProperties.modifyValue('denotation', denotationType)
-            } else {
-                selectedFeature.value.editingProperties.deleteKey('denotation')
-            }
-            return selectedFeature.value
-        }
-
-        const newFeature: GeoJSON.Feature = {
-            id: selectedFeature.getNewId(),
-            type: 'Feature',
-            geometry: {
-                type: 'Point',
-                coordinates: [0, 0]
-            },
-            properties: {
-                natural: naturalType
-            }
-        }
-        const newEditingProperties = new EditingProperties(newFeature)
-        if (naturalType === 'tree' && denotationType !== 'no') {
-            newEditingProperties.modifyValue('denotation', denotationType)
-        }
-        return {
-            feature: newFeature,
-            editingProperties: newEditingProperties
-        }
     }
 
     const onResultSelect = (index: number) => {
@@ -52,19 +14,13 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, natura
             candidate.selected = (index === idx)
             newCandidates.push(candidate)
             if (candidate.selected) {
-                // get the selected feature or create one
-                const sf = getOrCreateSelectedFeature()
+                const props: Record<string, string> = {}
                 // modify properties
-                if (candidate.localizedSpecies) sf.editingProperties.modifyValue(localizedSpeciesKey, candidate.localizedSpecies)
-                if (candidate.genus) sf.editingProperties.modifyValue('genus', candidate.genus)
-                if (candidate.species) sf.editingProperties.modifyValue('species', candidate.species)
-                sf.editingProperties.modifyValue('survey:date', new Date().toISOString().split('T')[0])
-
-                // set the value to update in every component
-                selectedFeature.setValue({
-                    feature: sf.feature,
-                    editingProperties: sf.editingProperties
-                })
+                if (candidate.localizedSpecies) props[localizedSpeciesKey] = candidate.localizedSpecies
+                if (candidate.genus) props['genus'] = candidate.genus
+                if (candidate.species) props['species'] = candidate.species
+                props['survey:date'] = new Date().toISOString().split('T')[0]
+                handleSelectCandidate(props)
             }
         })
         setCandidates(newCandidates)
