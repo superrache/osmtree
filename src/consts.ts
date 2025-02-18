@@ -2,10 +2,16 @@ import noneImg from './assets/no.svg'
 import landmarkIcon from './assets/landmark.svg'
 import naturalMonumentIcon from './assets/monument.svg'
 import urbanIcon from './assets/street.svg'
+import parkIcon from './assets/park.svg'
+import gardenIcon from './assets/garden.svg'
 import agriculturalIcon from './assets/agriculture.svg'
 import naturalTreeIcon from './assets/natural_tree.svg'
 import naturalShrubIcon from './assets/natural_shrub.svg'
 import naturalPlantIcon from './assets/natural_plant.svg'
+import needleIcon from './assets/needle.svg'
+import cactusIcon from './assets/cactus.svg'
+import deciduousIcon from './assets/deciduous.svg'
+import evergreenIcon from './assets/evergreen.svg'
 import leafImg from './assets/leaf.svg'
 import flowerImg from './assets/flower.svg'
 import fruitImg from './assets/fruit.svg'
@@ -52,6 +58,14 @@ export const combinations: Record<string, Combination> = {
                 icon: urbanIcon,
                 label: 'Urbain'
             },
+            'park': {
+                icon: parkIcon,
+                label: 'Parc'
+            },
+            'garden': {
+                icon: gardenIcon,
+                label: 'Jardin'
+            },
             'agricultural': {
                 icon: agriculturalIcon,
                 label: 'Agricole'
@@ -69,15 +83,15 @@ export const combinations: Record<string, Combination> = {
             },
             'broadleaved': {
                 label: 'Feuilles',
-                icon: agriculturalIcon
+                icon: leafImg
             },
             'needleleaved': {
                 label: 'Aiguilles',
-                icon: agriculturalIcon
+                icon: needleIcon
             },
             'leafless': {
                 label: 'Sans feuille',
-                icon: agriculturalIcon
+                icon: cactusIcon
             }
         }
     },
@@ -90,13 +104,13 @@ export const combinations: Record<string, Combination> = {
                 label: 'Non renseigné',
                 icon: noneImg
             },
-            'evergreen': {
-                label: 'Persistant',
-                icon: agriculturalIcon
-            },
             'deciduous': {
                 label: 'Caduque',
-                icon: agriculturalIcon
+                icon: deciduousIcon
+            },
+            'evergreen': {
+                label: 'Persistant',
+                icon: evergreenIcon
             },
             'semi_evergreen': {
                 label: 'Semi-persistant',

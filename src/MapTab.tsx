@@ -4,6 +4,37 @@ import confirmImg from './assets/confirm.svg'
 import cancelImg from './assets/cancel.svg'
 import crossImg from './assets/cross.svg'
 import layersImg from './assets/layers.svg'
+import tree1Img from './assets/collection/1.svg'
+import tree2Img from './assets/collection/2.svg'
+import tree3Img from './assets/collection/3.svg'
+import tree4Img from './assets/collection/4.svg'
+import tree5Img from './assets/collection/5.svg'
+import tree6Img from './assets/collection/6.svg'
+import tree7Img from './assets/collection/7.svg'
+import tree8Img from './assets/collection/8.svg'
+import tree9Img from './assets/collection/9.svg'
+import tree10Img from './assets/collection/10.svg'
+import tree11Img from './assets/collection/11.svg'
+import tree12Img from './assets/collection/12.svg'
+import tree13Img from './assets/collection/13.svg'
+import tree14Img from './assets/collection/14.svg'
+import tree15Img from './assets/collection/15.svg'
+import tree16Img from './assets/collection/16.svg'
+import tree17Img from './assets/collection/17.svg'
+import tree18Img from './assets/collection/18.svg'
+import tree19Img from './assets/collection/19.svg'
+import tree20Img from './assets/collection/20.svg'
+import tree21Img from './assets/collection/21.svg'
+import tree22Img from './assets/collection/22.svg'
+import tree23Img from './assets/collection/23.svg'
+import tree24Img from './assets/collection/24.svg'
+import tree25Img from './assets/collection/25.svg'
+import tree26Img from './assets/collection/26.svg'
+import tree27Img from './assets/collection/27.svg'
+import tree28Img from './assets/collection/28.svg'
+import tree29Img from './assets/collection/29.svg'
+import tree30Img from './assets/collection/30.svg'
+import tree31Img from './assets/collection/31.svg'
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
@@ -34,6 +65,8 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const lat = 47.05353
     const zoom = 16
     const maxZoomToGetData = 16
+
+    const treeImgs = [tree1Img, tree2Img, tree3Img, tree4Img, tree5Img, tree6Img, tree7Img, tree8Img, tree9Img, tree10Img, tree11Img, tree12Img, tree13Img, tree14Img, tree15Img, tree16Img, tree17Img, tree18Img, tree19Img, tree20Img, tree21Img, tree22Img, tree23Img, tree24Img, tree25Img, tree26Img, tree27Img, tree28Img, tree29Img, tree30Img, tree31Img]
 
     const orthoStyle: StyleSpecification = {
         version: 8,
@@ -163,10 +196,11 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                 if (naturalType === undefined) console.warn(feature.properties.natural)
                 const element = document.createElement('div')
                 element.className = 'feature-marker'
-                element.style.cssText = `background-color: ${naturalType.color}`
+                element.style.cssText = `background-color: #eee`
                 const icon = document.createElement('img')
-                icon.src = naturalType.icon
-                icon.style.cssText = 'width: 14px;'
+                //icon.src = naturalType.icon
+                icon.src = treeImgs[Math.floor(Math.random() * 31)]
+                icon.style.cssText = 'width: 26px;'
                 element.appendChild(icon)
                 // add this feature as a marker
                 const featureMarker = new FeatureMarker(feature, {

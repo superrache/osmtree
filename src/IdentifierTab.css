@@ -22,7 +22,7 @@
 .things {
   display: flex;
   justify-content: center;
-  margin: 15px 20px 15px;
+  margin: 15px 20px 12px;
   position: relative;
 }
 
@@ -37,7 +37,7 @@
 }
 
 .things img {
-  height: 50px;
+  height: 40px;
 }
 
 .thing:hover {
