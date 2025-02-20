@@ -9,14 +9,14 @@ import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
-import { OSMConnection, SelectedFeature, Tab } from "./types"
-import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext } from "./contexts"
-import { FeatureMarker } from "./FeatureMarker"
+import { OSMConnection, SelectedFeature, Tab, Uploaded } from "./types"
+import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from "./contexts"
 import { osmAuth } from 'osm-auth'
 import OsmRequest from 'osm-request'
 import { osmConfig } from "./consts"
 import NotificationBadge from "./NotificationBadge"
 import WikiTab from "./WikiTab"
+import { FeatureMarker } from "./FeatureMarker"
 
 const App = () => {
     const [activeTab, setActiveTab] = useState(0)
@@ -30,6 +30,7 @@ const App = () => {
         editedFeatures: {}
     })
     const [currentId, setCurrentId] = useState<number>(-1)
+    const [uploaded, setUploaded] = useState<Uploaded>({features: [], idsToDelete: []})
 
     const [readyToSendFeatureCount, setReadyToSendFeatureCount] = useState(0)
 
@@ -151,51 +152,56 @@ const App = () => {
             value: osmConnection,
             setValue: setOsmConnection
         }}>
-            <SelectedFeatureContext.Provider value={{
-                value: selectedFeature,
-                setValue: setSelectedFeature,
-                getNewId: () => {setCurrentId(currentId - 1); return currentId}
+            <FeatureMarkersContext.Provider value={{
+                value: featureMarkers,
+                setValue: setFeatureMarkers
             }}>
-                <FeatureMarkersContext.Provider value={{
-                    value: featureMarkers,
-                    setValue: setFeatureMarkers
+                <SelectedFeatureContext.Provider value={{
+                    value: selectedFeature,
+                    setValue: setSelectedFeature,
+                    getNewId: () => {setCurrentId(currentId - 1); return currentId}
                 }}>
-                    <MapContext.Provider value={{
-                        bounds: mapBounds,
-                        setBounds: setMapBounds
+                    <UploadedContext.Provider value={{
+                        value: uploaded,
+                        setValue: setUploaded
                     }}>
-                        <div className="app">
-                            <main className="tab_content">
-                                {tabs.map((tab, index) => (
-                                    <div
-                                    key={index}
-                                    className={`${activeTab === index ? 'block' : 'hidden'}`}
-                                >
-                                    {tab.content}
-                                </div>
-                                ))}
-                            </main>
-                            <nav className="tabs_bar">
-                                {tabs.map((tab, index) => {
-                                    return (
-                                        <button key={index}
-                                            onClick={() => setActiveTab(index)}
-                                            className={`tab_button ${activeTab === index ? 'tab_selected' : ''}`}>
-                                            <div className="tab-icon-container">
-                                                <img src={tab.icon} width='50' />
-                                                <NotificationBadge count={tab.notificationCount}></NotificationBadge>
-                                            </div>
-                                            <span className="tab-label">
-                                                {tab.label}
-                                            </span>
-                                        </button>
-                                    )
-                                })}
-                            </nav>
-                        </div>
-                    </MapContext.Provider>
-                </FeatureMarkersContext.Provider>
-            </SelectedFeatureContext.Provider>
+                        <MapContext.Provider value={{
+                            bounds: mapBounds,
+                            setBounds: setMapBounds
+                        }}>
+                            <div className="app">
+                                <main className="tab_content">
+                                    {tabs.map((tab, index) => (
+                                        <div
+                                        key={index}
+                                        className={`${activeTab === index ? 'block' : 'hidden'}`}
+                                    >
+                                        {tab.content}
+                                    </div>
+                                    ))}
+                                </main>
+                                <nav className="tabs_bar">
+                                    {tabs.map((tab, index) => {
+                                        return (
+                                            <button key={index}
+                                                onClick={() => setActiveTab(index)}
+                                                className={`tab_button ${activeTab === index ? 'tab_selected' : ''}`}>
+                                                <div className="tab-icon-container">
+                                                    <img src={tab.icon} width='50' />
+                                                    <NotificationBadge count={tab.notificationCount}></NotificationBadge>
+                                                </div>
+                                                <span className="tab-label">
+                                                    {tab.label}
+                                                </span>
+                                            </button>
+                                        )
+                                    })}
+                                </nav>
+                            </div>
+                        </MapContext.Provider>
+                    </UploadedContext.Provider>
+                </SelectedFeatureContext.Provider>
+            </FeatureMarkersContext.Provider>
         </OSMConnectionContext.Provider>
 
     )

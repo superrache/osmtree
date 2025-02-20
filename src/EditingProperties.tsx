@@ -88,8 +88,8 @@ export class EditingProperties {
         return undefined
     }
 
-    getTagsToSend(): Record<string, string | number> {
-        const tags: Record<string, string | number> = {}
+    getTagsToSend(): Record<string, string> {
+        const tags: Record<string, string> = {}
         for (const prop of this.props) {
             if (prop.key !== '' && prop.tag !== '' && prop.status !== 'deleted') tags[prop.key] = prop.tag
         }

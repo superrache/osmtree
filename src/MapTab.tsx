@@ -4,7 +4,7 @@ import confirmImg from './assets/confirm.svg'
 import cancelImg from './assets/cancel.svg'
 import crossImg from './assets/cross.svg'
 import layersImg from './assets/layers.svg'
-import tree1Img from './assets/collection/1.svg'
+/*import tree1Img from './assets/collection/1.svg'
 import tree2Img from './assets/collection/2.svg'
 import tree3Img from './assets/collection/3.svg'
 import tree4Img from './assets/collection/4.svg'
@@ -34,7 +34,7 @@ import tree27Img from './assets/collection/27.svg'
 import tree28Img from './assets/collection/28.svg'
 import tree29Img from './assets/collection/29.svg'
 import tree30Img from './assets/collection/30.svg'
-import tree31Img from './assets/collection/31.svg'
+import tree31Img from './assets/collection/31.svg'*/
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
@@ -42,7 +42,7 @@ import { getBounds } from './utils'
 import { MapTabParams, OverpassFeature } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
-import { FeatureMarkersContext, MapContext, SelectedFeatureContext } from './contexts'
+import { FeatureMarkersContext, MapContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 import { getOverpassData } from './Overpass'
 
@@ -50,8 +50,9 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
 
-    const selectedFeature = useContext(SelectedFeatureContext)
     const featureMarkers = useContext(FeatureMarkersContext)
+    const selectedFeature = useContext(SelectedFeatureContext)
+    const uploaded = useContext(UploadedContext)
     const mapContext = useContext(MapContext)
 
     const [loading, setLoading] = useState<boolean>(false)
@@ -66,7 +67,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const zoom = 16
     const maxZoomToGetData = 16
 
-    const treeImgs = [tree1Img, tree2Img, tree3Img, tree4Img, tree5Img, tree6Img, tree7Img, tree8Img, tree9Img, tree10Img, tree11Img, tree12Img, tree13Img, tree14Img, tree15Img, tree16Img, tree17Img, tree18Img, tree19Img, tree20Img, tree21Img, tree22Img, tree23Img, tree24Img, tree25Img, tree26Img, tree27Img, tree28Img, tree29Img, tree30Img, tree31Img]
+    //const treeImgs = [tree1Img, tree2Img, tree3Img, tree4Img, tree5Img, tree6Img, tree7Img, tree8Img, tree9Img, tree10Img, tree11Img, tree12Img, tree13Img, tree14Img, tree15Img, tree16Img, tree17Img, tree18Img, tree19Img, tree20Img, tree21Img, tree22Img, tree23Img, tree24Img, tree25Img, tree26Img, tree27Img, tree28Img, tree29Img, tree30Img, tree31Img]
 
     const orthoStyle: StyleSpecification = {
         version: 8,
@@ -89,6 +90,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             }
         ]
     }
+
+    useEffect(() => {
+        loadFeatures(uploaded.value.features, uploaded.value.idsToDelete)
+    }, [uploaded])
 
     useEffect(() => {
         if (map.current) return
@@ -126,6 +131,12 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             map.current.on('load', onMapLoad)
         }
     }, [lng, lat, zoom])
+
+    useEffect(() => {
+        if (selectedFeature.value !== null) {
+            //updateMarker(selectedFeature.value.feature) TODO: how to update feature when natural type has changed
+        }
+    }, [selectedFeature.value])
 
     const onMapLoad = () => {
         //console.log('onMapLoad')
@@ -187,40 +198,57 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }
 
-    const loadFeatures = (features: OverpassFeature[]) => {
-        console.log(`loadFeatures with ${features.length} features`)
+    const loadFeatures = (features: OverpassFeature[], idsToDeleteBeforeLoading: number[] = []) => {
         const featureMarkersCopy = featureMarkers.value
+
+        if (idsToDeleteBeforeLoading.length > 0) {
+            console.log(`delete ${idsToDeleteBeforeLoading.length} features`)
+            // if a feature to delete is selected, reset selection
+            if (selectedFeature.value !== null && idsToDeleteBeforeLoading.includes(selectedFeature.value.feature.id)) {
+                selectedFeature.setValue(null)
+            }
+            for (const id in idsToDeleteBeforeLoading) {
+                if (id in featureMarkersCopy) {
+                    featureMarkersCopy[id].remove()
+                    delete featureMarkersCopy[id]
+                }
+            }
+        }
+
+        console.log(`loadFeatures with ${features.length} features`)
         for (const feature of features) {
             if (!(feature.id in featureMarkersCopy) && feature.properties.natural) {
                 const naturalType = naturalTypes[feature.properties.natural]
-                if (naturalType === undefined) console.warn(feature.properties.natural)
                 const element = document.createElement('div')
                 element.className = 'feature-marker'
-                element.style.cssText = `background-color: #eee`
+                element.style.cssText = `background-color: ${naturalType.color}`
                 const icon = document.createElement('img')
-                //icon.src = naturalType.icon
-                icon.src = treeImgs[Math.floor(Math.random() * 31)]
-                icon.style.cssText = 'width: 26px;'
+                icon.src = naturalType.icon
+                //icon.src = treeImgs[Math.floor(Math.random() * 31)]
+                icon.style.cssText = 'width: 14px;'
                 element.appendChild(icon)
                 // add this feature as a marker
                 const featureMarker = new FeatureMarker(feature, {
                     element: element,
                     clickTolerance: 2
                 })
-                if (map.current) {
-                    featureMarker.setLngLat([feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
-                    featureMarker.addTo(map.current)
-
-                    element.addEventListener('click', (e) => {
-                        selectFeature(feature.id, undefined)
-                        e.stopPropagation() // pour ne pas cliquer en plus sur la potentielle layer sous le marker
-                    })
-                    featureMarkersCopy[feature.id] = featureMarker
-                }
+                featureMarker.setLngLat([feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
+                if (map.current) featureMarker.addTo(map.current)
+                element.addEventListener('click', (e) => {
+                    selectFeature(feature.id, undefined)
+                    e.stopPropagation() // pour ne pas cliquer en plus sur la potentielle layer sous le marker
+                })
+                featureMarkersCopy[feature.id] = featureMarker
             }
         }
+
         featureMarkers.setValue(featureMarkersCopy)
         setLoading(false)
+    }
+
+    const updateMarker = (feature: OverpassFeature) => {
+        console.log('updateMarker')
+        loadFeatures([feature], [feature.id]) // FIXME: warning, the feature will be unselected
     }
 
     const selectFeature = (id: number | undefined, editingProperties: EditingProperties | undefined) => {
@@ -346,7 +374,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             <a className="title">
                 <img src={logo} className="logo" alt="osmtree" />
                 osmtree
-                {map.current && <span> bearing {map.current.getBearing()}°</span>}
+                {selectedFeature.value && <span>id={selectedFeature.value?.feature.id}</span>}
             </a>
             {selectedFeature.value !== null && <div className='selection_info'>
                 <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 

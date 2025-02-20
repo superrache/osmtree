@@ -1,13 +1,13 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import './UploadTab.css'
-import { FeatureMarkersContext, OSMConnectionContext, SelectedFeatureContext } from './contexts'
-import { UploadTabParams } from './types'
+import { OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
+import { OverpassFeature, UploadTabParams } from './types'
 import { naturalTypes } from './consts'
 
 const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const osmConnection = useContext(OSMConnectionContext)
-    const featureMarkers = useContext(FeatureMarkersContext)
     const selectedFeature = useContext(SelectedFeatureContext)
+    const uploaded = useContext(UploadedContext)
 
     const [comment, setComment] = useState<string>('')
     const [logs, setLogs] = useState<string[]>([])
@@ -59,29 +59,25 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
         const changesetId = await osmRequest.createChangeset('osmtree', comment)
         appendLog(`Groupe de modification créé : changeset=${changesetId}`)
 
-        const newMarkers = featureMarkers.value
+        const uploadedFeatures: OverpassFeature[] = []
+        const idsToDelete: number[] = []
 
         for (const feature of Object.values(osmConnection.value.editedFeatures)) {
             if (feature.feature.id) {
-                const id = feature.feature.id
-                appendLog(`Elément ${id}`)
-                const isNew = id < 0
+                const oldId = feature.feature.id
+                appendLog(`Elément ${oldId}`)
+                const isNew = oldId < 0
+                let newId = oldId
                 const newPosition = feature.editingProperties.getNewPosition() // LngLat or undefined
-                const coordsLatLng = newPosition !== undefined ? [newPosition.lat, newPosition.lng] : [0, 0]
+                const coordsLatLng = newPosition ? [newPosition.lat, newPosition.lng] : [0, 0]
                 const tags = feature.editingProperties.getTagsToSend() // only new/modified/unmodified not empty tags
 
                 if (isNew) {
                     let element = await osmRequest.createNodeElement(coordsLatLng[0], coordsLatLng[1], tags)
-                    const newId = await osmRequest.sendElement(element, changesetId)
+                    newId = await osmRequest.sendElement(element, changesetId)
                     appendLog(`Nouvel identifiant ${newId}`)
-
-                    // update the feature and marker
-                    const marker = newMarkers[id]
-                    marker.feature.id = newId
-                    newMarkers[newId] = marker
-                    delete newMarkers[id]
                 } else {
-                    let element = await osmRequest.fetchElement(`node/${id}`) // id au format node/123456789
+                    let element = await osmRequest.fetchElement(`node/${oldId}`) // id au format node/123456789
                     // update coordinates
                     if (newPosition !== undefined) element = osmRequest.setCoordinates(element, coordsLatLng[0], coordsLatLng[1])
                     // tags to delete
@@ -96,6 +92,15 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                     appendLog('Envoi de l\'élément')
                     await osmRequest.sendElement(element, changesetId)
                 }
+
+                // update the feature
+                idsToDelete.push(oldId) // delete every uploaded feature before recreating
+                uploadedFeatures.push({
+                    type: 'Feature',
+                    id: newId,
+                    geometry: {type: 'Point', coordinates: newPosition ? [newPosition.lng, newPosition.lat] : [0, 0]},
+                    properties: tags
+                })
             }
         }
         appendLog('Fermeture du groupe de modification')
@@ -110,7 +115,11 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
             osmRequest: osmRequest
         })
         // ...and updating features
-        featureMarkers.setValue(newMarkers)
+        // TODO: call MapTab.loadFeatures forcing update and deleting negative ids
+        uploaded.setValue({
+            features: uploadedFeatures,
+            idsToDelete: idsToDelete
+        })
     }
 
     const onEditedFeatureClick = (id: number) => {

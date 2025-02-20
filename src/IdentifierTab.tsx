@@ -62,6 +62,20 @@ const IdentifierTab = () => {
         }
     }, [selectedCombinations])
 
+    useEffect(() => {
+        if (selectedFeature.value !== null && naturalType !== selectedFeature.value.feature.properties.natural) {
+            // update marker, properties and editingProperties
+            const feature = selectedFeature.value.feature
+            feature.properties['natural'] = naturalType
+            const editingProperties = selectedFeature.value.editingProperties
+            editingProperties.modifyValue('natural', naturalType)
+            selectedFeature.setValue({
+                feature: feature, // triggers an update of the marker
+                editingProperties: editingProperties
+            })
+        }
+    }, [naturalType])
+
     const handleIdentify = async (params: PlantNetIdentifyParams) => {
         setIsLoading(true)
         setCandidates([])

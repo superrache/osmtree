@@ -125,3 +125,13 @@ export type OSMConnectionContextValue = {
     value: OSMConnection,
     setValue: (value: OSMConnection) => void
 }
+
+export type Uploaded = {
+    features: OverpassFeature[]
+    idsToDelete: number[]
+}
+
+export type UploadedContextValue = {
+    value: Uploaded
+    setValue: (value: Uploaded) => void
+}
