@@ -33,7 +33,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     useEffect(() => {
         // generate a comment from editedFeatures
         let news = 0, updates = 0
-        const typeNames = new Set()
+        const typeNames = new Set<string>()
         for (const feature of Object.values(osmConnection.value.editedFeatures)) {
             if (feature.feature.id < 0) news++
             else updates++
@@ -47,7 +47,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
             const featureCount = Object.keys(osmConnection.value.editedFeatures).length
             const plurial = featureCount > 1
             const names = Array.from(typeNames).join(plurial ? 's, ' : ', ') + (plurial ? 's' : '')
-            setComment(`${changeType} de ${featureCount} ${names}`)    
+            setComment(`${changeType} de ${featureCount} ${names}`)
         }
     }, [osmConnection.value])
 
@@ -69,17 +69,21 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 const isNew = oldId < 0
                 let newId = oldId
                 const newPosition = feature.editingProperties.getNewPosition() // LngLat or undefined
-                const coordsLatLng = newPosition ? [newPosition.lat, newPosition.lng] : [0, 0]
+                const coordsLatLng = newPosition ? [newPosition.lat, newPosition.lng] : undefined
                 const tags = feature.editingProperties.getTagsToSend() // only new/modified/unmodified not empty tags
 
                 if (isNew) {
-                    let element = await osmRequest.createNodeElement(coordsLatLng[0], coordsLatLng[1], tags)
-                    newId = await osmRequest.sendElement(element, changesetId)
-                    appendLog(`Nouvel identifiant ${newId}`)
+                    if (coordsLatLng === undefined) {
+                        appendLog(`Annulation, coordonnées nulles`)
+                    } else {
+                        let element = await osmRequest.createNodeElement(coordsLatLng[0], coordsLatLng[1], tags)
+                        newId = await osmRequest.sendElement(element, changesetId)
+                        appendLog(`Nouvel identifiant ${newId}`)
+                    }
                 } else {
                     let element = await osmRequest.fetchElement(`node/${oldId}`) // id au format node/123456789
                     // update coordinates
-                    if (newPosition !== undefined) element = osmRequest.setCoordinates(element, coordsLatLng[0], coordsLatLng[1])
+                    if (coordsLatLng !== undefined) element = osmRequest.setCoordinates(element, coordsLatLng[0], coordsLatLng[1])
                     // tags to delete
                     for (const prop of feature.editingProperties.getProps()) {
                         if (prop.status === 'deleted') {
@@ -98,7 +102,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 uploadedFeatures.push({
                     type: 'Feature',
                     id: newId,
-                    geometry: {type: 'Point', coordinates: newPosition ? [newPosition.lng, newPosition.lat] : [0, 0]},
+                    geometry: {type: 'Point', coordinates: coordsLatLng ? coordsLatLng : [0, 0]},
                     properties: tags
                 })
             }
