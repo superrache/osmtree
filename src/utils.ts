@@ -2,19 +2,9 @@ import { Map } from "maplibre-gl"
 import { EditableFeature } from "./types"
 import { naturalTypes } from "./consts"
 
-export const getServerUrl = () => {
-    const url = window.location.origin
-    if(url.indexOf('onrender.com') > 0) {
-        return url
-    } else {
-        return url.replace(':5173', ':3000')
-    }
-}
-
-export const getApiUrl = (callPoint: string) => {
-    const url = new URL(`${getServerUrl()}/api/${callPoint}`)
-    return url.toString()
-}
+// API (Cloudflare Pages Functions) is always served on the same origin as the client
+// (in dev, Vite proxies /api to `wrangler pages dev`)
+export const getApiUrl = (callPoint: string) => `/api/${callPoint}`
 
 export const round6Digits = (a: number) => {
     return (Math.round(a * 100000) / 100000)

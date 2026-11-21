@@ -1,6 +1,0 @@
-{
-  "watch": ["server"],
-  "ext": ".ts,.js",
-  "ignore": [],
-  "exec": "NODE_OPTIONS='--trace-deprecation --abort-on-uncaught-exception' tsx ./server/index.ts"
-}

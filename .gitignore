@@ -5,3 +5,5 @@ dist/
 CLAUDE.md
 .env
 .env.local
+.dev.vars
+.wrangler/
