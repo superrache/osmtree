@@ -5,6 +5,10 @@
 name = "osmtree"
 main = "worker/index.ts"
 compatibility_date = "2026-11-01"
+# production URL: osmtree.<subdomain>.workers.dev (registered as OAuth redirect URI on OSM)
+workers_dev = true
+# preview URLs for non-production branches (`wrangler versions upload`); OSM OAuth does not work there
+preview_urls = true
 
 [assets]
 directory = "./dist"
