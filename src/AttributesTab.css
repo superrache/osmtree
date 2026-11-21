@@ -31,3 +31,7 @@ table {
     display: flex;
     justify-content: center;
 }
+
+.delete-feature {
+    background-color: #af2700;
+}

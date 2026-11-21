@@ -116,3 +116,9 @@
 .load-error button {
     margin-left: 5px;
 }
+
+/* existing feature queued for deletion */
+.feature-marker-deleted {
+    opacity: 0.5;
+    outline: 2px dashed #af2700;
+}

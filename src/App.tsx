@@ -9,7 +9,7 @@ import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
-import { OSMConnection, SelectedFeature, Tab, Uploaded } from "./types"
+import { EditableFeature, OSMConnection, SelectedFeature, Tab, Uploaded } from "./types"
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from "./contexts"
 import { osmAuth } from 'osm-auth'
 import OsmRequest from 'osm-request'
@@ -35,6 +35,7 @@ const App = () => {
     const [readyToSendFeatureCount, setReadyToSendFeatureCount] = useState(0)
 
     const mapTabRef = useRef<(() => void) | undefined>(undefined)
+    const focusFeatureRef = useRef<((feature: EditableFeature) => void) | undefined>(undefined)
 
     useEffect(() => {
         console.log('APP: selectedFeature updated', selectedFeature !== null ? selectedFeature.feature.id : null)
@@ -61,6 +62,12 @@ const App = () => {
                 mapTabRef.current()
             }
           }, 0)
+    }
+
+    // select a feature and show it on the map tab
+    const handleShowFeature = (feature: EditableFeature) => {
+        setActiveTab(0)
+        setTimeout(() => focusFeatureRef.current?.(feature), 0) // once the map tab is displayed
     }
 
     const osmLogin = () => {
@@ -127,25 +134,46 @@ const App = () => {
     }
 
     const [tabs, setTabs] = useState<Tab[]>([
-        { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef}></MapTab> },
+        { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef} focusFeatureRef={focusFeatureRef}></MapTab> },
         { icon: attributesImg, label: 'Attributs', notificationCount: 0, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
         { icon: identifyImg, label: 'Assistant', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
         { icon: imageImg, label: 'Wiki', notificationCount: 0, content: <WikiTab></WikiTab> },
-        { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout}></UploadTab> }
+        { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout} onShowFeature={handleShowFeature}></UploadTab> }
     ])
 
-    // landing from osm authentication page
-    const params = new URLSearchParams((window.location.search || '?').substring(1))
-    if (params.get('code') !== null && osmConnection.auth && !osmConnection.auth.authenticated()) {
-        osmConnection.auth.authenticate(() => {
-            console.log('Authentication success')
-            setTimeout(() => getOsmUserName(), 100)
-            window.history.replaceState(null, '', window.location.href.replace(window.location.search, ""))
-            setActiveTab(4)
-        })
-    } else if (osmConnection.auth && osmConnection.auth.authenticated() && osmConnection.userName.length === 0) { // already connected at startup, just update username
-        getOsmUserName()
-    }
+    // landing from osm authentication page: handled once per page load, in an effect
+    // (in render, StrictMode's double render called authenticate() again after the saved
+    // OAuth state had been consumed, which started a new login: endless redirect loop)
+    const oauthLandingHandled = useRef(false)
+    useEffect(() => {
+        if (oauthLandingHandled.current) return // StrictMode runs effects twice in dev
+        oauthLandingHandled.current = true
+
+        const params = new URLSearchParams(window.location.search)
+        const code = params.get('code')
+        const error = params.get('error')
+        if (code !== null || error !== null) {
+            // remove the OAuth parameters right away (keep the map position in the hash)
+            window.history.replaceState(null, '', window.location.pathname + window.location.hash)
+            if (error !== null) {
+                console.error('OSM authentication refused', error, params.get('error_description'))
+            } else if (code !== null && !osmConnection.auth.authenticated()) {
+                osmConnection.auth.bootstrapToken(code, (err: unknown) => {
+                    if (err) {
+                        console.error('OSM authentication failed', err)
+                        return
+                    }
+                    console.log('Authentication success')
+                    getOsmUserName()
+                    setActiveTab(4)
+                }, params.get('state') ?? undefined)
+            }
+        } else if (osmConnection.auth.authenticated() && osmConnection.userName.length === 0) {
+            // already connected at startup, just update username
+            getOsmUserName()
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per page load, on purpose
+    }, [])
 
     return (
         <OSMConnectionContext.Provider value={{
