@@ -25,7 +25,7 @@ const App = () => {
     const [mapBounds, setMapBounds] = useState<string>('0,0,0,0')
     const [osmConnection, setOsmConnection] = useState<OSMConnection>({
         userName: '',
-        auth: osmAuth(osmConfig),
+        auth: new osmAuth(osmConfig),
         osmRequest: new OsmRequest(osmConfig),
         editedFeatures: {}
     })
@@ -66,7 +66,7 @@ const App = () => {
     const osmLogin = () => {
         console.log('osmLogin')
         if (osmConnection.auth && !osmConnection.auth.authenticated()) {
-            osmConnection.auth.authenticate((err: any, res: any) => {
+            osmConnection.auth.authenticate((err: any) => {
                 if(err) {
                     console.error(err)
                     osmLogout()

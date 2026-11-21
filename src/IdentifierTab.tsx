@@ -3,7 +3,7 @@ import './IdentifierTab.css'
 import PlantNetIdentifyForm from './PlantNetIdentifyForm'
 import { PlantNetIdentifyParams, PlantNetCandidate, OverpassFeature } from './types'
 import CandidateChoice from './CandidateChoice'
-import { getApiUrl } from './utils'
+import { getApiUrl, getNatural, getNaturalLabel } from './utils'
 import { SelectedFeatureContext } from './contexts'
 import { combinations, naturalTypes } from './consts'
 import { EditingProperties } from './EditingProperties'
@@ -21,7 +21,7 @@ const IdentifierTab = () => {
 
     useEffect(() => {
         if (selectedFeature.value !== null) {
-            const natType = selectedFeature.value.feature.properties['natural'] // natural is required
+            const natType = getNatural(selectedFeature.value) ?? naturalType
             // select the natural type
             setNaturalType(natType)
             // update combinations types from selected feature editing properties
@@ -63,14 +63,12 @@ const IdentifierTab = () => {
     }, [selectedCombinations])
 
     useEffect(() => {
-        if (selectedFeature.value !== null && naturalType !== selectedFeature.value.feature.properties.natural) {
-            // update marker, properties and editingProperties
-            const feature = selectedFeature.value.feature
-            feature.properties['natural'] = naturalType
+        if (selectedFeature.value !== null && naturalType !== getNatural(selectedFeature.value)) {
+            // only the editing properties change: feature.properties keeps the original OSM tags (needed by Cancel)
             const editingProperties = selectedFeature.value.editingProperties
             editingProperties.modifyValue('natural', naturalType)
             selectedFeature.setValue({
-                feature: feature, // triggers an update of the marker
+                feature: selectedFeature.value.feature, // triggers an update of the marker
                 editingProperties: editingProperties
             })
         }
@@ -187,7 +185,7 @@ const IdentifierTab = () => {
                     : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
                     selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
                 <br/>
-                <span>{naturalTypes[selectedFeature.value.feature.properties['natural']].label}</span>
+                <span>{getNaturalLabel(getNatural(selectedFeature.value))}</span>
                 <br/>
                 <span>{naturalType}</span>
             </div>}

@@ -1,7 +1,6 @@
-import { Feature } from "maplibre-gl"
+import type { Feature as GeoJSONFeature, Point } from "geojson"
 import { EditingProperties } from "./EditingProperties"
 import { FeatureMarker } from "./FeatureMarker"
-import { Ref } from "react"
 
 export type Tab = {
     icon: string
@@ -14,7 +13,7 @@ export type DataResponse = {
     error?: number
     message?: string
     type?: 'FeatureCollection'
-    features?: GeoJSON.Feature[]
+    features?: GeoJSONFeature[]
 }
 
 export type Organ = {
@@ -82,7 +81,7 @@ export type CombinationValue = {
 export type OverpassFeature = {
     type: "Feature";
     id: number // difference with maplibregl GeoJSON.Feature string | number | undefined
-    geometry: GeoJSON.Point // always type Point
+    geometry: Point // always type Point
     properties: Record<string, string>
 }
 

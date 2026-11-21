@@ -35,16 +35,22 @@ import tree28Img from './assets/collection/28.svg'
 import tree29Img from './assets/collection/29.svg'
 import tree30Img from './assets/collection/30.svg'
 import tree31Img from './assets/collection/31.svg'*/
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
+import type { Point } from 'geojson'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, setWorkerUrl } from 'maplibre-gl'
+// maplibre-gl 6 resolves its worker relative to import.meta.url, which breaks once Vite bundles it
+// (dev: .vite/deps, prod: assets/). Let Vite serve/emit the worker file and give its URL explicitly.
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds } from './utils'
+import { getBounds, getNatural, getNaturalLabel } from './utils'
 import { MapTabParams, OverpassFeature } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 import { getOverpassData } from './Overpass'
+
+setWorkerUrl(maplibreWorkerUrl)
 
 const MapTab = ({mapTabRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
@@ -56,6 +62,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const mapContext = useContext(MapContext)
 
     const [loading, setLoading] = useState<boolean>(false)
+    const [loadError, setLoadError] = useState<boolean>(false)
+    // refs: onMapMove is registered once on the map, it must not rely on render-time state
+    const moveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+    const loadController = useRef<AbortController | null>(null)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
@@ -66,6 +76,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const lat = 47.05353
     const zoom = 16
     const maxZoomToGetData = 16
+    const moveDebounceMs = 400
 
     //const treeImgs = [tree1Img, tree2Img, tree3Img, tree4Img, tree5Img, tree6Img, tree7Img, tree8Img, tree9Img, tree10Img, tree11Img, tree12Img, tree13Img, tree14Img, tree15Img, tree16Img, tree17Img, tree18Img, tree19Img, tree20Img, tree21Img, tree22Img, tree23Img, tree24Img, tree25Img, tree26Img, tree27Img, tree28Img, tree29Img, tree30Img, tree31Img]
 
@@ -132,12 +143,6 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }, [lng, lat, zoom])
 
-    useEffect(() => {
-        if (selectedFeature.value !== null) {
-            //updateMarker(selectedFeature.value.feature) TODO: how to update feature when natural type has changed
-        }
-    }, [selectedFeature.value])
-
     const onMapLoad = () => {
         //console.log('onMapLoad')
         if (map && map.current) {
@@ -176,25 +181,51 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }
 
-    const onMapMove = async () => {
-        //console.log('onMapMove')
-        if (map && map.current && map.current.getZoom() >= maxZoomToGetData) {
-            const bounds = getBounds(map.current)
-            const mapEl = document.getElementById('map')
-            const mapIsVisible = mapEl && mapEl.clientHeight > 0
-            if (bounds !== mapContext.bounds && mapIsVisible) {
-                mapContext.setBounds(bounds) // update map context
-                await reload(bounds)
-            }
+    useEffect(() => {
+        return () => { // unmount: stop pending work
+            clearTimeout(moveTimer.current)
+            loadController.current?.abort()
         }
+    }, [])
+
+    // wait for the end of the moves before requesting data
+    const onMapMove = () => {
+        clearTimeout(moveTimer.current)
+        moveTimer.current = setTimeout(loadVisibleData, moveDebounceMs)
     }
 
-    const reload = async (bounds: string) => {
-        setLoading(true)
+    const loadVisibleData = async () => {
+        if (!map.current || map.current.getZoom() < maxZoomToGetData) return
+        const mapEl = document.getElementById('map')
+        if (!mapEl || mapEl.clientHeight === 0) return // map tab hidden
 
-        const data = await getOverpassData(bounds)
-        if (data && data.features) {
-            loadFeatures(data.features)
+        mapContext.setBounds(getBounds(map.current)) // update map context
+
+        // only one request at a time: cancel the previous one
+        loadController.current?.abort()
+        const controller = new AbortController()
+        loadController.current = controller
+
+        const bounds = map.current.getBounds()
+        setLoading(true)
+        setLoadError(false)
+        try {
+            const data = await getOverpassData({
+                south: bounds.getSouth(),
+                west: bounds.getWest(),
+                north: bounds.getNorth(),
+                east: bounds.getEast()
+            }, controller.signal)
+            if (data) loadFeatures(data.features) // null: every tile already loaded
+        } catch (error) {
+            if (controller.signal.aborted) return // replaced by a newer request
+            console.error('Overpass data unavailable', error)
+            setLoadError(true)
+        } finally {
+            if (loadController.current === controller) {
+                loadController.current = null
+                setLoading(false)
+            }
         }
     }
 
@@ -207,7 +238,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             if (selectedFeature.value !== null && idsToDeleteBeforeLoading.includes(selectedFeature.value.feature.id)) {
                 selectedFeature.setValue(null)
             }
-            for (const id in idsToDeleteBeforeLoading) {
+            for (const id of idsToDeleteBeforeLoading) {
                 if (id in featureMarkersCopy) {
                     featureMarkersCopy[id].remove()
                     delete featureMarkersCopy[id]
@@ -218,15 +249,13 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         console.log(`loadFeatures with ${features.length} features`)
         for (const feature of features) {
             if (!(feature.id in featureMarkersCopy) && feature.properties.natural) {
-                const naturalType = naturalTypes[feature.properties.natural]
                 const element = document.createElement('div')
                 element.className = 'feature-marker'
-                element.style.cssText = `background-color: ${naturalType.color}`
                 const icon = document.createElement('img')
-                icon.src = naturalType.icon
                 //icon.src = treeImgs[Math.floor(Math.random() * 31)]
                 icon.style.cssText = 'width: 14px;'
                 element.appendChild(icon)
+                styleMarkerElement(element, feature.properties.natural)
                 // add this feature as a marker
                 const featureMarker = new FeatureMarker(feature, {
                     element: element,
@@ -243,13 +272,32 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
 
         featureMarkers.setValue(featureMarkersCopy)
-        setLoading(false)
     }
 
-    const updateMarker = (feature: OverpassFeature) => {
-        console.log('updateMarker')
-        loadFeatures([feature], [feature.id]) // FIXME: warning, the feature will be unselected
+    // apply the natural type colour and icon to a marker element
+    const styleMarkerElement = (element: HTMLElement, natural: string | undefined) => {
+        const naturalType = natural !== undefined ? naturalTypes[natural] : undefined
+        if (naturalType === undefined) return
+        element.style.backgroundColor = naturalType.color
+        const icon = element.querySelector('img')
+        if (icon) icon.src = naturalType.icon
     }
+
+    // update the existing marker in place (no remove/recreate: keeps the selection,
+    // the 'feature-marker-selected' class and the click handler)
+    const updateMarker = (feature: OverpassFeature, editingProperties?: EditingProperties) => {
+        const featureMarker = featureMarkers.value[feature.id]
+        if (featureMarker === undefined) return // e.g. feature created in IdentifierTab, not on the map yet
+        const natural = editingProperties?.getValue('natural') ?? feature.properties.natural
+        styleMarkerElement(featureMarker.getElement(), natural)
+    }
+
+    useEffect(() => {
+        if (selectedFeature.value !== null) {
+            // natural type may have changed (IdentifierTab): refresh the marker look
+            updateMarker(selectedFeature.value.feature, selectedFeature.value.editingProperties)
+        }
+    }, [selectedFeature.value])
 
     const selectFeature = (id: number | undefined, editingProperties: EditingProperties | undefined) => {
         // unselect current feature unless editingProperties is given
@@ -303,7 +351,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
 
         if (map.current) {
             const center = map.current.getCenter()
-            const pointGeom: GeoJSON.Point = {
+            const pointGeom: Point = {
                 type: 'Point',
                 coordinates: [center.lng, center.lat]
             }
@@ -382,7 +430,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                     : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
                     selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
                 <br/>
-                <span>{naturalTypes[selectedFeature.value.feature.properties['natural']].label}</span>
+                <span>{getNaturalLabel(getNatural(selectedFeature.value))}</span>
             </div>}
             { map.current && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
@@ -402,7 +450,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                     </button>
                 </div>
             }
-            { loading && <div className='loading'>Loading</div> }
+            { loading && <div className='loading'>Chargement…</div> }
+            { !loading && loadError && <div className='loading load-error'>
+                Données indisponibles <button onClick={loadVisibleData}>Réessayer</button>
+            </div> }
             { !creatingPosition && <div className="creating-position-buttons">
                 <button className="creating-position-button" onClick={onAddButtonClick}>
                     <img src={crossImg} width='50' />

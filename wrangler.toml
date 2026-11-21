@@ -1,0 +1,6 @@
+# Cloudflare Pages: static client (dist/) + Pages Functions (functions/)
+# Secret PLANTNET_API_KEY: set it in the Pages dashboard (or `wrangler pages secret put PLANTNET_API_KEY`),
+# and in .dev.vars for local development.
+name = "osmtree"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"

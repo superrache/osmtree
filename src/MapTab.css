@@ -108,3 +108,11 @@
     right: 10px;
     z-index: 7000;
 }
+
+.load-error {
+    background-color: #b3412e;
+}
+
+.load-error button {
+    margin-left: 5px;
+}
