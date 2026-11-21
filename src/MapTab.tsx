@@ -57,6 +57,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const mapContext = useContext(MapContext)
 
     const [loading, setLoading] = useState<boolean>(false)
+    const [loadError, setLoadError] = useState<boolean>(false)
+    // refs: onMapMove is registered once on the map, it must not rely on render-time state
+    const moveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+    const loadController = useRef<AbortController | null>(null)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
@@ -67,6 +71,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
     const lat = 47.05353
     const zoom = 16
     const maxZoomToGetData = 16
+    const moveDebounceMs = 400
 
     //const treeImgs = [tree1Img, tree2Img, tree3Img, tree4Img, tree5Img, tree6Img, tree7Img, tree8Img, tree9Img, tree10Img, tree11Img, tree12Img, tree13Img, tree14Img, tree15Img, tree16Img, tree17Img, tree18Img, tree19Img, tree20Img, tree21Img, tree22Img, tree23Img, tree24Img, tree25Img, tree26Img, tree27Img, tree28Img, tree29Img, tree30Img, tree31Img]
 
@@ -171,25 +176,51 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }
 
-    const onMapMove = async () => {
-        //console.log('onMapMove')
-        if (map && map.current && map.current.getZoom() >= maxZoomToGetData) {
-            const bounds = getBounds(map.current)
-            const mapEl = document.getElementById('map')
-            const mapIsVisible = mapEl && mapEl.clientHeight > 0
-            if (bounds !== mapContext.bounds && mapIsVisible) {
-                mapContext.setBounds(bounds) // update map context
-                await reload(bounds)
-            }
+    useEffect(() => {
+        return () => { // unmount: stop pending work
+            clearTimeout(moveTimer.current)
+            loadController.current?.abort()
         }
+    }, [])
+
+    // wait for the end of the moves before requesting data
+    const onMapMove = () => {
+        clearTimeout(moveTimer.current)
+        moveTimer.current = setTimeout(loadVisibleData, moveDebounceMs)
     }
 
-    const reload = async (bounds: string) => {
-        setLoading(true)
+    const loadVisibleData = async () => {
+        if (!map.current || map.current.getZoom() < maxZoomToGetData) return
+        const mapEl = document.getElementById('map')
+        if (!mapEl || mapEl.clientHeight === 0) return // map tab hidden
 
-        const data = await getOverpassData(bounds)
-        if (data && data.features) {
-            loadFeatures(data.features)
+        mapContext.setBounds(getBounds(map.current)) // update map context
+
+        // only one request at a time: cancel the previous one
+        loadController.current?.abort()
+        const controller = new AbortController()
+        loadController.current = controller
+
+        const bounds = map.current.getBounds()
+        setLoading(true)
+        setLoadError(false)
+        try {
+            const data = await getOverpassData({
+                south: bounds.getSouth(),
+                west: bounds.getWest(),
+                north: bounds.getNorth(),
+                east: bounds.getEast()
+            }, controller.signal)
+            if (data) loadFeatures(data.features) // null: every tile already loaded
+        } catch (error) {
+            if (controller.signal.aborted) return // replaced by a newer request
+            console.error('Overpass data unavailable', error)
+            setLoadError(true)
+        } finally {
+            if (loadController.current === controller) {
+                loadController.current = null
+                setLoading(false)
+            }
         }
     }
 
@@ -236,7 +267,6 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
 
         featureMarkers.setValue(featureMarkersCopy)
-        setLoading(false)
     }
 
     // apply the natural type colour and icon to a marker element
@@ -415,7 +445,10 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                     </button>
                 </div>
             }
-            { loading && <div className='loading'>Loading</div> }
+            { loading && <div className='loading'>Chargement…</div> }
+            { !loading && loadError && <div className='loading load-error'>
+                Données indisponibles <button onClick={loadVisibleData}>Réessayer</button>
+            </div> }
             { !creatingPosition && <div className="creating-position-buttons">
                 <button className="creating-position-button" onClick={onAddButtonClick}>
                     <img src={crossImg} width='50' />
