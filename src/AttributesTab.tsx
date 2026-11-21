@@ -200,7 +200,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                         (selectedFeature.value.feature.geometry.type === 'Point' 
                         && selectedFeature.value.feature.geometry.coordinates[0] === 0)
                         || selectedFeature.value.editingProperties.getChangedCount() === 0}>Valider</button>
-                    <button onClick={onCancel}>Annuler</button>
+                    <button onClick={onCancel} disabled={selectedFeature.value.editingProperties.getChangedCount() === 0}>Annuler</button>
                     <button className="delete-feature" onClick={onDeleteFeature}>Supprimer</button>
                 </div>
             </div>}
