@@ -36,7 +36,10 @@ import tree29Img from './assets/collection/29.svg'
 import tree30Img from './assets/collection/30.svg'
 import tree31Img from './assets/collection/31.svg'*/
 import type { Point } from 'geojson'
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, setWorkerUrl } from 'maplibre-gl'
+// maplibre-gl 6 resolves its worker relative to import.meta.url, which breaks once Vite bundles it
+// (dev: .vite/deps, prod: assets/). Let Vite serve/emit the worker file and give its URL explicitly.
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getNatural, getNaturalLabel } from './utils'
@@ -46,6 +49,8 @@ import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 import { getOverpassData } from './Overpass'
+
+setWorkerUrl(maplibreWorkerUrl)
 
 const MapTab = ({mapTabRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
