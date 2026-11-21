@@ -1,6 +1,12 @@
-# Cloudflare Pages: static client (dist/) + Pages Functions (functions/)
-# Secret PLANTNET_API_KEY: set it in the Pages dashboard (or `wrangler pages secret put PLANTNET_API_KEY`),
+# Cloudflare Worker with static assets: serves the Vite build (dist/) and the /api/* routes (worker/index.ts).
+# Secret PLANTNET_API_KEY: set it in the Worker settings (or `npx wrangler secret put PLANTNET_API_KEY`),
 # and in .dev.vars for local development.
+# `name` must match the Worker name in the Cloudflare dashboard (Workers Builds).
 name = "osmtree"
-pages_build_output_dir = "dist"
+main = "worker/index.ts"
 compatibility_date = "2026-11-01"
+
+[assets]
+directory = "./dist"
+# only /api/* reaches the Worker; everything else is served from dist/
+run_worker_first = ["/api/*"]

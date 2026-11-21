@@ -1,5 +1,6 @@
-// Cloudflare Pages Function: POST /api/plantnet-identify
-// Relays an identification request to the Pl@ntNet API so that the API key stays server-side.
+// Cloudflare Worker: API routes (static files of dist/ are served by the assets binding, see wrangler.toml)
+//
+// POST /api/plantnet-identify relays an identification request to the Pl@ntNet API so that the API key stays server-side.
 // Response contract (unchanged from the former Express server):
 //   success -> {results}
 //   error   -> {error: 20 (bad request) | 21 (Pl@ntNet API error) | 22 (network/unknown error), data?}
@@ -11,7 +12,7 @@ interface Env {
 const MAX_FILE_SIZE = 12 * 1024 * 1024 // 12 MB
 const IMAGE_NAME_REGEX = /\.(jpe?g|png)$/i // Pl@ntNet accepts only png and jpeg files
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+const plantnetIdentify = async (request: Request, env: Env): Promise<Response> => {
     if (!env.PLANTNET_API_KEY) {
         console.error('PLANTNET_API_KEY is not set')
         return Response.json({ error: 22, data: { message: 'server misconfiguration' } })
@@ -61,3 +62,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         return Response.json({ error: 22, data: { message: 'unknown error from plantnet API call' } })
     }
 }
+
+export default {
+    async fetch(request, env) {
+        const { pathname } = new URL(request.url)
+        if (pathname === '/api/plantnet-identify') {
+            if (request.method !== 'POST') return new Response('Method Not Allowed', { status: 405, headers: { Allow: 'POST' } })
+            return plantnetIdentify(request, env)
+        }
+        return new Response('Not Found', { status: 404 })
+    }
+} satisfies ExportedHandler<Env>

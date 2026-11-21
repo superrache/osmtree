@@ -10,7 +10,7 @@ export default defineConfig({
     host: '127.0.0.1', // !important: osm-auth allows only this host for http (not 'localhost')
     port: 5173,
     proxy: {
-      '/api': 'http://127.0.0.1:8788' // Pages Functions served by `wrangler pages dev`
+      '/api': 'http://127.0.0.1:8788' // Worker served by `wrangler dev`
     }
   }
 })

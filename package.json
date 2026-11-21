@@ -9,12 +9,12 @@
   "scripts": {
     "lint": "eslint .",
     "dev:client": "vite",
-    "dev:functions": "wrangler pages dev public --ip 127.0.0.1 --port 8788",
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:functions\"",
-    "typecheck": "tsc -b && tsc -p functions/tsconfig.json",
+    "dev:worker": "mkdir -p dist && wrangler dev --ip 127.0.0.1 --port 8788",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:worker\"",
+    "typecheck": "tsc -b && tsc -p worker/tsconfig.json",
     "build": "npm run typecheck && vite build",
-    "preview": "npm run build && wrangler pages dev --ip 127.0.0.1",
-    "deploy": "npm run build && wrangler pages deploy"
+    "preview": "npm run build && wrangler dev --ip 127.0.0.1",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "maplibre-gl": "^6.19.0",
