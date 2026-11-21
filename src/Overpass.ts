@@ -1,11 +1,19 @@
 import { OverpassFeature, OverpassFeatureCollection } from "./types"
 
-// Independent Overpass services first: gall/lambert/lz4/z.overpass-api.de all belong to the
-// same overpass-api.de pool, so listing them separately gives no real failover.
-const instances = [
-    'https://overpass-api.de',
-    'https://overpass.private.coffee'
+// Public interpreter endpoints, picked at random. They must be independent services:
+// gall/lambert/lz4/z.overpass-api.de all belong to the same overpass-api.de pool.
+const publicInstances = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.private.coffee/api/interpreter'
 ]
+
+// OVERPASS_URL (build time) overrides the public servers: one interpreter URL, or several
+// separated by commas, tried in the given order (the next ones are fallbacks).
+const parseInstances = (value: string | undefined) =>
+    (value ?? '').split(',').map((url) => url.trim().replace(/\/+$/, '')).filter((url) => url.length > 0)
+
+const customInstances = parseInstances(import.meta.env.OVERPASS_URL)
+const instances = customInstances.length > 0 ? customInstances : publicInstances
 
 const naturalValues = ['tree', 'shrub', 'plant']
 
@@ -125,7 +133,7 @@ const fetchFromInstance = async (instance: string, query: string, signal?: Abort
     const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
     let response: Response
     try {
-        response = await fetch(`${instance}/api/interpreter`, {
+        response = await fetch(instance, {
             method: 'POST', // form encoded body: no CORS preflight, no URL length limit
             body: new URLSearchParams({ data: query }),
             signal: signal ? AbortSignal.any([signal, timeout]) : timeout
@@ -158,7 +166,8 @@ export const getOverpassData = async (view: ViewBounds, signal?: AbortSignal): P
     if (range === null) return null
 
     const query = buildQuery(tileRangeToBbox(range))
-    const first = Math.floor(Math.random() * instances.length)
+    // custom servers: keep the configured order; public servers: spread the load
+    const first = customInstances.length > 0 ? 0 : Math.floor(Math.random() * instances.length)
     let lastError: unknown = null
 
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
