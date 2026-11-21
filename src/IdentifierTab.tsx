@@ -28,9 +28,9 @@ const IdentifierTab = () => {
             const newSelectedCombinations: Record<string, string> = {}
             for (const [key, combination] of Object.entries(combinations)) {
                 if (combination.natural.includes(natType)) {
-                    newSelectedCombinations[key] = Object.keys(combination.values)[0] // none
+                    // display only: a value unknown to the assistant (e.g. leaf_type=mixed) highlights nothing
                     const val = selectedFeature.value.editingProperties.getValue(key)
-                    if (val && val in combination.values) newSelectedCombinations[key] = val
+                    newSelectedCombinations[key] = val || Object.keys(combination.values)[0] // none
                 }
             }
             setSelectedCombinations(newSelectedCombinations)
@@ -45,22 +45,20 @@ const IdentifierTab = () => {
         }
     }, [selectedFeature.value])
 
-    useEffect(() => {
+    // a combination clicked by the user: the only place where the assistant writes these tags
+    // (no effect: an effect also ran when the tags were edited in AttributesTab and removed them)
+    const onCombinationClick = (key: string, tag: string) => {
+        setSelectedCombinations({...selectedCombinations, [key]: tag})
         if (selectedFeature.value !== null) {
             const editingProperties = selectedFeature.value.editingProperties
-            const oldProps = structuredClone(editingProperties.props)
-            for (const [key, tag] of Object.entries(selectedCombinations)) {
-                if (tag === 'none') editingProperties.deleteKey(key)
-                else editingProperties.modifyValue(key, tag)
-            }
-            if (JSON.stringify(editingProperties.props) !== JSON.stringify(oldProps)) { // props modified? need update
-                selectedFeature.setValue({
-                    feature: selectedFeature.value.feature,
-                    editingProperties: editingProperties
-                })
-            }
+            if (tag === 'none') editingProperties.deleteKey(key)
+            else editingProperties.modifyValue(key, tag)
+            selectedFeature.setValue({
+                feature: selectedFeature.value.feature,
+                editingProperties: editingProperties
+            })
         }
-    }, [selectedCombinations])
+    }
 
     useEffect(() => {
         if (selectedFeature.value !== null && naturalType !== getNatural(selectedFeature.value)) {
@@ -158,11 +156,10 @@ const IdentifierTab = () => {
 
         // update from type selectors
         sf.editingProperties.modifyValue('natural', naturalType)
-        for (const combination of Object.values(combinations)) {
-            if (combination.natural.includes(naturalType)) {
-                sf.editingProperties.modifyValue(combination.key, selectedCombinations[combination.key])
-            } else {
-                sf.editingProperties.deleteKey(combination.key)
+        // (already applied on click to a selected feature; needed when the feature is created here)
+        for (const [key, tag] of Object.entries(selectedCombinations)) {
+            if (tag !== 'none' && key in combinations && combinations[key].values[tag] !== undefined) {
+                sf.editingProperties.modifyValue(key, tag)
             }
         }
 
@@ -221,11 +218,7 @@ const IdentifierTab = () => {
                                 return (
                                     <div className="thing" key={tag}
                                         style={{opacity: key in selectedCombinations && tag === selectedCombinations[key] ? 1 : 0.5}}
-                                        onClick={() => {
-                                            const selectedCombinationsCopy = structuredClone(selectedCombinations)
-                                            selectedCombinationsCopy[key] = tag
-                                            setSelectedCombinations(selectedCombinationsCopy)
-                                        }}>
+                                        onClick={() => onCombinationClick(key, tag)}>
                                         <img src={cbVal.icon} width='50' />
                                         {cbVal.label}
                                     </div>

@@ -14,9 +14,12 @@
       color: white;
   }
   
-  li { list-style: none;}
+  .suggestions, .suggestion {
+    list-style: none;
+  }
   
   .suggestions {
+    margin: 0;
     position: absolute;
     top: 0;
     left: 0;
@@ -29,7 +32,7 @@
     border-top: none;
     border-radius: 2px;
     max-height: 400px;
-    overflow-y: none;
+    overflow-y: auto;
     z-index: 9999;
   }
   

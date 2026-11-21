@@ -61,6 +61,7 @@ export class EditingProperties {
     modifyValue(key: string, tag: string): void {
         for (const prop of this.props) {
             if (prop.key === key) {
+                if (tag === prop.tag && prop.status !== 'deleted') return // no change (keeps e.g. 'modified')
                 const status = prop.status === 'new' ? 'new' : (tag !== prop.tag ? 'modified' : 'unmodified')
                 prop.tag = tag
                 prop.status = status

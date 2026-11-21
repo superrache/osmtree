@@ -8,11 +8,22 @@ interface InputProps {
         onValueChange: (value: string, other: string | null, newVal: string) => void
 }
 
+const debounceMs = 250
+
 const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, onValueChange }) => {
     const [innerValue, setInnerValue] = useState<string>('')
     const [suggestions, setSuggestions] = useState<string[]>([])
     const [cursor, setCursor] = useState(-1)
     const containerRef = useRef<HTMLDivElement | null>(null)
+    // only the latest request may show suggestions: a late response (after a selection,
+    // a blur or newer typing) would reopen the list
+    const requestId = useRef(0)
+    const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+    const focused = useRef(false)
+
+    useEffect(() => {
+        return () => clearTimeout(debounceTimer.current) // unmount
+    }, [])
 
     // console.log('init autocompleteinput', value, other)
 
@@ -24,18 +35,39 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
         setInnerValue(value)
     }, [value])
 
-    const onInput = async (val: string) => {
-        // console.log('onInput', val, other)
-        setInnerValue(val)
-        const newSuggestions = await suggestionsFunction(innerValue, other)
-        setSuggestions(newSuggestions)
+    // close the list and drop pending or in-flight requests
+    const closeSuggestions = () => {
+        requestId.current++
+        clearTimeout(debounceTimer.current)
+        setSuggestions([])
+        setCursor(-1)
     }
 
-    const selectItem = (suggestion: string) => {
+    const fetchSuggestions = (val: string) => {
+        const id = ++requestId.current
+        clearTimeout(debounceTimer.current)
+        debounceTimer.current = setTimeout(async () => {
+            try {
+                const newSuggestions = await suggestionsFunction(val, other)
+                if (id === requestId.current && focused.current) {
+                    setSuggestions(newSuggestions)
+                    setCursor(-1)
+                }
+            } catch (error) {
+                console.error('autocomplete error', error)
+            }
+        }, debounceMs)
+    }
+
+    const onInput = (val: string) => {
+        setInnerValue(val)
+        fetchSuggestions(val)
+    }
+
+    const selectItem = (suggestion: string | undefined) => {
         if (suggestion) {
             setInnerValue(suggestion)
-            onInput(suggestion)
-            setSuggestions([])
+            closeSuggestions()
         }
     }
 
@@ -45,34 +77,34 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
         }
     }
 
+    // move the highlighted suggestion, from -1 (none) to the last one, and keep it visible
+    const moveCursor = (newCursor: number) => {
+        setCursor(newCursor)
+        const suggestionElements = containerRef.current?.getElementsByClassName('suggestion')
+        suggestionElements?.[newCursor]?.scrollIntoView({ block: 'nearest' })
+    }
+
     const up = () => {
-        if (cursor > -1 && containerRef.current) {
-            setCursor(cursor - 1)
-            const suggestionElements = containerRef.current.getElementsByClassName('suggestion')
-            if (suggestionElements[cursor]) {
-                suggestionElements[cursor].scrollIntoView({ block: 'nearest' })
-            }
-        }
+        if (cursor > -1) moveCursor(cursor - 1)
     }
 
     const down = () => {
         if (suggestions.length === 0) {
-                onInput(innerValue)
-        } else if (cursor < suggestions.length && containerRef.current) {
-            setCursor(cursor + 1)
-            const suggestionElements = containerRef.current.getElementsByClassName('suggestion')
-            if (suggestionElements[cursor]) {
-                suggestionElements[cursor].scrollIntoView({ block: 'nearest' })
-            }
+            fetchSuggestions(innerValue)
+        } else if (cursor < suggestions.length - 1) {
+            moveCursor(cursor + 1)
         }
     }
 
     const escape = () => {
-        setSuggestions([])
+        closeSuggestions()
     }
 
     const blur = () => {
-        setTimeout(() => setSuggestions([]), 200)
+        focused.current = false
+        requestId.current++ // a response arriving after the blur must not reopen the list
+        clearTimeout(debounceTimer.current)
+        setTimeout(() => setSuggestions([]), 200) // delay: let a click on a suggestion happen first
     }
 
     return (
@@ -94,6 +126,7 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
                         down()
                     }
                 }}
+                onFocus={() => { focused.current = true }}
                 onBlur={blur}
             />
             {suggestions.length > 0 && (
@@ -102,6 +135,7 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
                         <li
                             key={index}
                             className={`suggestion ${index === cursor ? 'suggestion-hovered' : ''}`}
+                            onMouseDown={(e) => e.preventDefault()} // keep the focus in the input
                             onClick={() => selectItem(suggestion)}
                             onMouseOver={() => setCursor(index)}
                         >

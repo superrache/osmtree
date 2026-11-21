@@ -42,7 +42,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
 
     const onInputValue = async (searchTerm: string, key: string | null) => {
         // console.log('OnInputValue', searchTerm, key)
-        const url = `${tagInfoInstance}/api/4/key/values?page=1&rp=10&sortname=count_all&sortorder=desc&key=${key}&query=${encodeURIComponent(searchTerm)}`
+        const url = `${tagInfoInstance}/api/4/key/values?page=1&rp=10&sortname=count_all&sortorder=desc&key=${encodeURIComponent(key ?? '')}&query=${encodeURIComponent(searchTerm)}`
         const response = await fetch(url)
         const json = await response.json()
         const suggestions = []

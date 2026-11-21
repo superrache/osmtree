@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 import './UploadTab.css'
 import { OSMConnectionContext, UploadedContext } from './contexts'
 import { OverpassFeature, UploadTabParams } from './types'
-import { naturalTypes } from './consts'
+import { buildChangesetComment, CommentedEdit } from './changesetComment'
 import { getNatural } from './utils'
 
 const UploadTab = ({osmLogin, osmLogout, onShowFeature}: UploadTabParams) => {
@@ -32,28 +32,11 @@ const UploadTab = ({osmLogin, osmLogout, onShowFeature}: UploadTabParams) => {
 
     useEffect(() => {
         // generate a comment from editedFeatures
-        let news = 0, updates = 0, deletions = 0
-        const typeNames = new Set<string>()
-        for (const feature of Object.values(osmConnection.value.editedFeatures)) {
-            if (feature.feature.id < 0) news++
-            else if (feature.editingProperties.isDeleted()) deletions++
-            else updates++
-            const natural = getNatural(feature)
-            if (natural && natural in naturalTypes) {
-                typeNames.add(naturalTypes[natural].label.toLowerCase())
-            }
-        }
-        if (news > 0 || updates > 0 || deletions > 0) {
-            const changeType = [
-                news > 0 ? 'ajout' : '',
-                updates > 0 ? 'mise à jour' : '',
-                deletions > 0 ? 'suppression' : ''
-            ].filter((type) => type !== '').join(' / ')
-            const featureCount = Object.keys(osmConnection.value.editedFeatures).length
-            const plurial = featureCount > 1
-            const names = Array.from(typeNames).join(plurial ? 's, ' : ', ') + (plurial ? 's' : '')
-            setComment(`${changeType} de ${featureCount} ${names}`)
-        }
+        const edits: CommentedEdit[] = Object.values(osmConnection.value.editedFeatures).map((feature) => ({
+            action: feature.feature.id < 0 ? 'add' : feature.editingProperties.isDeleted() ? 'delete' : 'update',
+            natural: getNatural(feature)
+        }))
+        if (edits.length > 0) setComment(buildChangesetComment(edits))
     }, [osmConnection.value])
 
     const onSend = async () => {
