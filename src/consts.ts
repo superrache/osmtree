@@ -147,4 +147,5 @@ const prodOsmConfig = {
     singlepage: true
 }
 
-export const osmConfig = prodOsmConfig
+// set VITE_OSM_ENV=dev to target the OSM dev API (master.apis.dev.openstreetmap.org)
+export const osmConfig = import.meta.env.VITE_OSM_ENV === 'dev' ? devOsmConfig : prodOsmConfig

@@ -3,6 +3,7 @@ import './UploadTab.css'
 import { OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { OverpassFeature, UploadTabParams } from './types'
 import { naturalTypes } from './consts'
+import { getNatural } from './utils'
 
 const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const osmConnection = useContext(OSMConnectionContext)
@@ -12,7 +13,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     const [comment, setComment] = useState<string>('')
     const [logs, setLogs] = useState<string[]>([])
     const [lastChangesetId, setLastChangesetId] = useState<number>(0)
-    const logContainerRef = useRef(null)
+    const logContainerRef = useRef<HTMLDivElement>(null)
 
     const commentChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
         setComment(event.target.value)
@@ -37,8 +38,9 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
         for (const feature of Object.values(osmConnection.value.editedFeatures)) {
             if (feature.feature.id < 0) news++
             else updates++
-            if (feature.feature.properties.natural && feature.feature.properties.natural in naturalTypes) {
-                typeNames.add(naturalTypes[feature.feature.properties.natural].label.toLowerCase())
+            const natural = getNatural(feature)
+            if (natural && natural in naturalTypes) {
+                typeNames.add(naturalTypes[natural].label.toLowerCase())
             }
         }
         if (news > 0 || updates > 0) {
@@ -75,6 +77,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 if (isNew) {
                     if (coordsLatLng === undefined) {
                         appendLog(`Annulation, coordonnées nulles`)
+                        continue
                     } else {
                         let element = await osmRequest.createNodeElement(coordsLatLng[0], coordsLatLng[1], tags)
                         newId = await osmRequest.sendElement(element, changesetId)
@@ -102,7 +105,8 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 uploadedFeatures.push({
                     type: 'Feature',
                     id: newId,
-                    geometry: {type: 'Point', coordinates: coordsLatLng ? coordsLatLng : [0, 0]},
+                    // GeoJSON order is [lng, lat]; an unmoved feature keeps its current position
+                    geometry: {type: 'Point', coordinates: newPosition ? [newPosition.lng, newPosition.lat] : feature.feature.geometry.coordinates},
                     properties: tags
                 })
             }
@@ -151,7 +155,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 {Object.keys(osmConnection.value.editedFeatures).length === 0 && <div>Aucun</div>}
                 {Object.keys(osmConnection.value.editedFeatures).length > 0 && <ul>
                     {Object.values(osmConnection.value.editedFeatures).map((feature, index) => {
-                        return <li key={index} onClick={() => onEditedFeatureClick(feature.feature.id)}><a>{feature.feature.properties.natural} {feature.feature.id}</a></li>
+                        return <li key={index} onClick={() => onEditedFeatureClick(feature.feature.id)}><a>{getNatural(feature)} {feature.feature.id}</a></li>
                     })}
                 </ul>}
                 <br/>

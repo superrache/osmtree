@@ -35,10 +35,11 @@ import tree28Img from './assets/collection/28.svg'
 import tree29Img from './assets/collection/29.svg'
 import tree30Img from './assets/collection/30.svg'
 import tree31Img from './assets/collection/31.svg'*/
+import type { Point } from 'geojson'
 import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds } from './utils'
+import { getBounds, getNatural, getNaturalLabel } from './utils'
 import { MapTabParams, OverpassFeature } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
@@ -132,12 +133,6 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         }
     }, [lng, lat, zoom])
 
-    useEffect(() => {
-        if (selectedFeature.value !== null) {
-            //updateMarker(selectedFeature.value.feature) TODO: how to update feature when natural type has changed
-        }
-    }, [selectedFeature.value])
-
     const onMapLoad = () => {
         //console.log('onMapLoad')
         if (map && map.current) {
@@ -207,7 +202,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
             if (selectedFeature.value !== null && idsToDeleteBeforeLoading.includes(selectedFeature.value.feature.id)) {
                 selectedFeature.setValue(null)
             }
-            for (const id in idsToDeleteBeforeLoading) {
+            for (const id of idsToDeleteBeforeLoading) {
                 if (id in featureMarkersCopy) {
                     featureMarkersCopy[id].remove()
                     delete featureMarkersCopy[id]
@@ -218,15 +213,13 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         console.log(`loadFeatures with ${features.length} features`)
         for (const feature of features) {
             if (!(feature.id in featureMarkersCopy) && feature.properties.natural) {
-                const naturalType = naturalTypes[feature.properties.natural]
                 const element = document.createElement('div')
                 element.className = 'feature-marker'
-                element.style.cssText = `background-color: ${naturalType.color}`
                 const icon = document.createElement('img')
-                icon.src = naturalType.icon
                 //icon.src = treeImgs[Math.floor(Math.random() * 31)]
                 icon.style.cssText = 'width: 14px;'
                 element.appendChild(icon)
+                styleMarkerElement(element, feature.properties.natural)
                 // add this feature as a marker
                 const featureMarker = new FeatureMarker(feature, {
                     element: element,
@@ -246,10 +239,30 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
         setLoading(false)
     }
 
-    const updateMarker = (feature: OverpassFeature) => {
-        console.log('updateMarker')
-        loadFeatures([feature], [feature.id]) // FIXME: warning, the feature will be unselected
+    // apply the natural type colour and icon to a marker element
+    const styleMarkerElement = (element: HTMLElement, natural: string | undefined) => {
+        const naturalType = natural !== undefined ? naturalTypes[natural] : undefined
+        if (naturalType === undefined) return
+        element.style.backgroundColor = naturalType.color
+        const icon = element.querySelector('img')
+        if (icon) icon.src = naturalType.icon
     }
+
+    // update the existing marker in place (no remove/recreate: keeps the selection,
+    // the 'feature-marker-selected' class and the click handler)
+    const updateMarker = (feature: OverpassFeature, editingProperties?: EditingProperties) => {
+        const featureMarker = featureMarkers.value[feature.id]
+        if (featureMarker === undefined) return // e.g. feature created in IdentifierTab, not on the map yet
+        const natural = editingProperties?.getValue('natural') ?? feature.properties.natural
+        styleMarkerElement(featureMarker.getElement(), natural)
+    }
+
+    useEffect(() => {
+        if (selectedFeature.value !== null) {
+            // natural type may have changed (IdentifierTab): refresh the marker look
+            updateMarker(selectedFeature.value.feature, selectedFeature.value.editingProperties)
+        }
+    }, [selectedFeature.value])
 
     const selectFeature = (id: number | undefined, editingProperties: EditingProperties | undefined) => {
         // unselect current feature unless editingProperties is given
@@ -303,7 +316,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
 
         if (map.current) {
             const center = map.current.getCenter()
-            const pointGeom: GeoJSON.Point = {
+            const pointGeom: Point = {
                 type: 'Point',
                 coordinates: [center.lng, center.lat]
             }
@@ -382,7 +395,7 @@ const MapTab = ({mapTabRef}: MapTabParams) => {
                     : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
                     selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
                 <br/>
-                <span>{naturalTypes[selectedFeature.value.feature.properties['natural']].label}</span>
+                <span>{getNaturalLabel(getNatural(selectedFeature.value))}</span>
             </div>}
             { map.current && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>

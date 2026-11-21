@@ -104,7 +104,7 @@ if (prod) {
 }
 
 function listRoutes() {
-    app._router.stack.forEach((middleware: any) => {
+    app.router.stack.forEach((middleware: any) => {
         if (middleware.route) {
             // Routes directes
             console.log(`${Object.keys(middleware.route.methods)} ${middleware.route.path}`)
