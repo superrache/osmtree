@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import './AttributesTab.css'
 import { FeatureMarkersContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import AutocompleteInput from './AutocompleteInput'
@@ -8,11 +8,17 @@ import { EditingProperties } from './EditingProperties'
 // FIXME: bug: create an existing key with the last line
 // FIXME: bug: delete a key then recreate it with the last line
 
+// specific to one feature: never copied to another one
+const notDuplicatedKeys = ['name', 'ref', 'note', 'fixme', 'description', 'image', 'wikidata', 'wikipedia', 'survey:date', 'check_date']
+
 const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
     const selectedFeature = useContext(SelectedFeatureContext)
     const osmConnection = useContext(OSMConnectionContext)
     const featureMarkers = useContext(FeatureMarkersContext)
     const uploaded = useContext(UploadedContext)
+
+    // tags of the last validated feature, to duplicate them on the next one (e.g. a row of trees)
+    const [previousFeature, setPreviousFeature] = useState<{id: number, tags: Record<string, string>} | null>(null)
 
     const tagInfoInstance = 'https://taginfo.openstreetmap.org'
 
@@ -139,11 +145,38 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
         updateVueFromModel()
     }
 
+    // tags of the previous feature that would change the selected one
+    const getTagsToDuplicate = (): Record<string, string> => {
+        if (previousFeature === null || selectedFeature.value === null) return {}
+        if (previousFeature.id === selectedFeature.value.feature.id) return {}
+        const editingProperties = selectedFeature.value.editingProperties
+        const tags: Record<string, string> = {}
+        for (const [key, value] of Object.entries(previousFeature.tags)) {
+            if (notDuplicatedKeys.includes(key)) continue
+            const current = editingProperties.getProps().find((prop) => prop.key === key)
+            if (current === undefined || current.tag !== value || current.status === 'deleted') tags[key] = value
+        }
+        return tags
+    }
+
+    const onDuplicatePrevious = () => {
+        if (selectedFeature.value === null) return
+        // add the missing tags and overwrite the different values; other tags are kept
+        for (const [key, value] of Object.entries(getTagsToDuplicate())) {
+            selectedFeature.value.editingProperties.modifyValue(key, value)
+        }
+        updateVueFromModel()
+    }
+
     const onValidate = () => {
         if (selectedFeature.value !== null && selectedFeature.value.feature.id ) {
             // send the selected feature to osmConnection.editedFeatures
             const editedFeatures = osmConnection.value.editedFeatures
             editedFeatures[selectedFeature.value.feature.id] = selectedFeature.value
+            setPreviousFeature({
+                id: selectedFeature.value.feature.id,
+                tags: selectedFeature.value.editingProperties.getTagsToSend()
+            })
             osmConnection.setValue({
                 userName: osmConnection.value.userName,
                 auth: osmConnection.value.auth,
@@ -195,6 +228,11 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                 </table>
                 {selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] === 0 && <div>Cet élément n'a pas de position géographique. <button onClick={onLocateFeature}>Positionner</button></div>}
                 {selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] !== 0 && <div><button onClick={onLocateFeature}>Déplacer l'élément</button></div>}
+                <div>
+                    <button onClick={onDuplicatePrevious} disabled={Object.keys(getTagsToDuplicate()).length === 0}>
+                        Dupliquer les attributs de l'élément précédent
+                    </button>
+                </div>
                 <div className="buttons">
                     <button onClick={onValidate} disabled={
                         (selectedFeature.value.feature.geometry.type === 'Point' 
