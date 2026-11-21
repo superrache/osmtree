@@ -1,13 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import './UploadTab.css'
-import { OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
+import { OSMConnectionContext, UploadedContext } from './contexts'
 import { OverpassFeature, UploadTabParams } from './types'
 import { naturalTypes } from './consts'
 import { getNatural } from './utils'
 
-const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
+const UploadTab = ({osmLogin, osmLogout, onShowFeature}: UploadTabParams) => {
     const osmConnection = useContext(OSMConnectionContext)
-    const selectedFeature = useContext(SelectedFeatureContext)
     const uploaded = useContext(UploadedContext)
 
     const [comment, setComment] = useState<string>('')
@@ -131,8 +130,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
     }
 
     const onEditedFeatureClick = (id: number) => {
-        const feature = osmConnection.value.editedFeatures[id]
-        selectedFeature.setValue(feature)
+        onShowFeature(osmConnection.value.editedFeatures[id])
     }
 
     return (
@@ -155,7 +153,7 @@ const UploadTab = ({osmLogin, osmLogout}: UploadTabParams) => {
                 {Object.keys(osmConnection.value.editedFeatures).length === 0 && <div>Aucun</div>}
                 {Object.keys(osmConnection.value.editedFeatures).length > 0 && <ul>
                     {Object.values(osmConnection.value.editedFeatures).map((feature, index) => {
-                        return <li key={index} onClick={() => onEditedFeatureClick(feature.feature.id)}><a>{getNatural(feature)} {feature.feature.id}</a></li>
+                        return <li key={index} onClick={() => onEditedFeatureClick(feature.feature.id)}><a>{getNatural(feature)} {feature.feature.id < 0 ? `(nouveau ${-feature.feature.id})` : feature.feature.id}</a></li>
                     })}
                 </ul>}
                 <br/>

@@ -9,7 +9,7 @@ import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
-import { OSMConnection, SelectedFeature, Tab, Uploaded } from "./types"
+import { EditableFeature, OSMConnection, SelectedFeature, Tab, Uploaded } from "./types"
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from "./contexts"
 import { osmAuth } from 'osm-auth'
 import OsmRequest from 'osm-request'
@@ -35,6 +35,7 @@ const App = () => {
     const [readyToSendFeatureCount, setReadyToSendFeatureCount] = useState(0)
 
     const mapTabRef = useRef<(() => void) | undefined>(undefined)
+    const focusFeatureRef = useRef<((feature: EditableFeature) => void) | undefined>(undefined)
 
     useEffect(() => {
         console.log('APP: selectedFeature updated', selectedFeature !== null ? selectedFeature.feature.id : null)
@@ -61,6 +62,12 @@ const App = () => {
                 mapTabRef.current()
             }
           }, 0)
+    }
+
+    // select a feature and show it on the map tab
+    const handleShowFeature = (feature: EditableFeature) => {
+        setActiveTab(0)
+        setTimeout(() => focusFeatureRef.current?.(feature), 0) // once the map tab is displayed
     }
 
     const osmLogin = () => {
@@ -127,11 +134,11 @@ const App = () => {
     }
 
     const [tabs, setTabs] = useState<Tab[]>([
-        { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef}></MapTab> },
+        { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef} focusFeatureRef={focusFeatureRef}></MapTab> },
         { icon: attributesImg, label: 'Attributs', notificationCount: 0, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
         { icon: identifyImg, label: 'Assistant', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
         { icon: imageImg, label: 'Wiki', notificationCount: 0, content: <WikiTab></WikiTab> },
-        { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout}></UploadTab> }
+        { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout} onShowFeature={handleShowFeature}></UploadTab> }
     ])
 
     // landing from osm authentication page

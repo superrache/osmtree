@@ -54,10 +54,12 @@ export type AttributesTabParams = {
 export type UploadTabParams = {
     osmLogin: () => void
     osmLogout: () => void
+    onShowFeature: (feature: EditableFeature) => void
 }
 
 export type MapTabParams = {
     mapTabRef: React.RefObject<(() => void) | undefined>
+    focusFeatureRef: React.RefObject<((feature: EditableFeature) => void) | undefined>
 }
 
 export type NaturalType = {
