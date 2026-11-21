@@ -112,6 +112,7 @@ const IdentifierTab = () => {
                     localizedSpecies: localizedSpecies,
                     score: res['score'],
                     species: speciesScientificName,
+                    gbifId: res.gbif?.id !== undefined ? String(res.gbif.id) : '',
                     selected: false
                 }
 
@@ -165,10 +166,16 @@ const IdentifierTab = () => {
             }
         }
 
+        // species:wikidata of another species is outdated (read before updating species)
+        const speciesChanged = props['species'] !== undefined && props['species'] !== sf.editingProperties.getValue('species')
+        if (speciesChanged && props['species:wikidata'] === undefined) sf.editingProperties.deleteKey('species:wikidata')
+
         // update from candidates props
         for (const [key, tag] of Object.entries(props)) {
             sf.editingProperties.modifyValue(key, tag)
         }
+        // check_date replaces the discouraged survey:date
+        if (props['check_date'] !== undefined) sf.editingProperties.deleteKey('survey:date')
 
         // set the value to update in every component
         selectedFeature.setValue({

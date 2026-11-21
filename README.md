@@ -1,108 +1,79 @@
 # osmtree
 
-Application web pour cartographier les **arbres, arbustes et plantes** dans [OpenStreetMap](https://www.openstreetmap.org), directement sur le terrain.
+A web app to map **trees, shrubs and plants** in [OpenStreetMap](https://www.openstreetmap.org), right in the field.
 
-L'application est pensée **mobile first** : elle s'utilise au téléphone, en marchant, avec la géolocalisation, la boussole et l'appareil photo. Il n'existe pas de mise en page spécifique pour ordinateur : elle reste utilisable dans un navigateur de bureau, mais avec l'interface mobile.
+The app is designed **mobile first**: it is meant to be used on a phone, while walking, with geolocation, the compass and the camera. There is no desktop-specific layout: it still works in a desktop browser, but with the mobile interface.
 
-## Fonctionnalités
+## Features
 
-- **Carte** : affichage des nœuds `natural=tree`, `natural=shrub` et `natural=plant` (chargés via Overpass à partir du zoom 16), sur fond d'orthophotos IGN ou de carte Jawg. Géolocalisation et orientation automatique de la carte selon la boussole du téléphone.
-- **Identification** : prise de photo d'une feuille, d'une fleur, d'un fruit ou d'une écorce, puis identification de l'espèce par l'API [Pl@ntNet](https://my.plantnet.org). Le candidat choisi renseigne `species`, `genus`, `species:fr` et `survey:date`.
-- **Assistant** : choix du type (arbre, arbuste, plante) et de combinaisons courantes de tags (`denotation`, `leaf_type`, `leaf_cycle`).
-- **Édition des attributs** : ajout, modification et suppression de tags, avec autocomplétion des clés et valeurs depuis [taginfo](https://taginfo.openstreetmap.org).
-- **Création et déplacement** d'éléments avec un réticule au centre de la carte.
-- **Wiki** : fiche Wikipédia de l'espèce sélectionnée.
-- **Envoi** : connexion au compte OSM (OAuth2) et envoi de toutes les modifications validées dans un seul changeset, avec un commentaire généré automatiquement.
+- **Map**: displays `natural=tree`, `natural=shrub` and `natural=plant` nodes (loaded from Overpass from zoom 16), on top of IGN orthophotos or a Jawg map. Geolocation and automatic map rotation following the phone's compass.
+- **Identification**: take a photo of a leaf, flower, fruit or bark, then identify the species with the [Pl@ntNet](https://my.plantnet.org) API. The chosen candidate fills in `species`, `genus`, `species:fr`, `species:wikidata` (found on Wikidata from the GBIF id returned by Pl@ntNet) and `check_date`.
+- **Assistant**: choice of the type (tree, shrub, plant) and of common tag combinations (`denotation`, `leaf_type`, `leaf_cycle`).
+- **Attribute editing**: add, modify and delete tags, with key and value autocompletion from [taginfo](https://taginfo.openstreetmap.org).
+- **Creating and moving** features with a crosshair at the center of the map.
+- **Wiki**: Wikipedia page of the selected species.
+- **Upload**: log in to an OSM account (OAuth2) and upload all validated changes in a single changeset, with an automatically generated comment.
 
 ## Architecture
 
-- **Client** : React 19, TypeScript, Vite 8 et MapLibre GL. Overpass, taginfo, OSM et Wikipédia sont appelés directement depuis le navigateur.
-- **Serverless** : un Worker Cloudflare (`worker/index.ts`) sert les fichiers statiques du client et une seule route d'API, `POST /api/plantnet-identify`. Celle-ci relaie la photo vers Pl@ntNet pour que la clé d'API reste côté serveur.
+- **Client**: React 19, TypeScript, Vite 8 and MapLibre GL. Overpass, taginfo, OSM and Wikipedia are called directly from the browser.
+- **Serverless**: a Cloudflare Worker (`worker/index.ts`) serves the client's static files and a single API route, `POST /api/plantnet-identify`. It forwards the photo to Pl@ntNet so that the API key stays on the server side.
 
 ```
-src/            client React (onglets, carte, édition, envoi OSM)
-worker/         Worker Cloudflare (route /api/plantnet-identify)
-public/         fichiers statiques copiés tels quels
-wrangler.toml   configuration du Worker et des fichiers statiques
+src/            React client (tabs, map, editing, OSM upload)
+worker/         Cloudflare Worker (/api/plantnet-identify route)
+public/         static files copied as is
+wrangler.toml   Worker and static files configuration
 ```
 
-## Prérequis
+## Requirements
 
 - Node.js ≥ 22.12
-- Une clé d'API [Pl@ntNet](https://my.plantnet.org) pour l'identification
-- Un compte Cloudflare pour le déploiement
+- A [Pl@ntNet](https://my.plantnet.org) API key for identification
 
-## Installation et développement
+## Installation and development
 
 ```bash
 npm install
-echo "PLANTNET_API_KEY=votre_cle" > .dev.vars   # clé Pl@ntNet pour le Worker local (fichier ignoré par git)
+echo "PLANTNET_API_KEY=your_key" > .dev.vars   # Pl@ntNet key for the local Worker (file ignored by git)
 npm run dev
 ```
 
-`npm run dev` lance le client Vite sur http://127.0.0.1:5173 et le Worker (`wrangler dev`) sur le port 8788. Vite redirige `/api` vers le Worker.
+`npm run dev` starts the Vite client on http://127.0.0.1:5173 and the Worker (`wrangler dev`) on port 8788. Vite proxies `/api` to the Worker.
 
-> Ouvrez bien **http://127.0.0.1:5173** et non `localhost` : la connexion OSM (OAuth2) n'accepte que `127.0.0.1` en http.
+> Open **http://127.0.0.1:5173**: the OSM login (OAuth2) only accepts `127.0.0.1` over http.
 
-Pour tester sur un téléphone, la géolocalisation, la boussole et la connexion OSM exigent une origine sécurisée (https). Le plus simple est d'utiliser une URL de preview du déploiement (voir plus bas).
+To test on a phone, geolocation, the compass and the OSM login require a secure origin (https). The easiest way is to use a preview URL of the deployment.
 
 ### Scripts
 
-| Commande | Rôle |
-|---|---|
-| `npm run dev` | client Vite + Worker local |
-| `npm run dev:client` | client Vite seul |
-| `npm run dev:worker` | Worker local seul |
-| `npm run typecheck` | vérification des types (client et Worker) |
-| `npm run lint` | ESLint |
-| `npm run build` | vérification des types puis build du client dans `dist/` |
-| `npm run preview` | build puis Worker local servant `dist/`, comme en production |
-| `npm run deploy` | build puis déploiement manuel avec `wrangler deploy` |
+| Command              | Purpose                                                       |
+| -------------------- | ------------------------------------------------------------- |
+| `npm run dev`        | Vite client + local Worker                                    |
+| `npm run dev:client` | Vite client only                                              |
+| `npm run dev:worker` | local Worker only                                             |
+| `npm run typecheck`  | type checking (client and Worker)                             |
+| `npm run lint`       | ESLint                                                        |
+| `npm run build`      | type checking, then client build into `dist/`                 |
+| `npm run preview`    | build, then local Worker serving `dist/`, as in production    |
+| `npm run deploy`     | build, then manual deployment with `wrangler deploy`          |
 
-## Variables d'environnement
+## Environment variables
 
-Voir [`.env.example`](.env.example).
+See [`.env.example`](.env.example).
 
-| Variable | Lue | Rôle |
-|---|---|---|
-| `PLANTNET_API_KEY` | à l'exécution, par le Worker | clé d'API Pl@ntNet. En local dans `.dev.vars`, en production comme secret du Worker. |
-| `VITE_OSM_ENV` | au build, par Vite | `dev` pour envoyer les modifications sur l'API de test OSM (`master.apis.dev.openstreetmap.org`) au lieu de la production. |
-| `OVERPASS_URL` | au build, par Vite | URL(s) d'interpréteur Overpass, séparées par des virgules, à utiliser à la place des serveurs publics. Le serveur doit autoriser le CORS. |
+| Variable           | Read                     | Purpose                                                                                                                  |
+| ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `PLANTNET_API_KEY` | at runtime, by the Worker | Pl@ntNet API key. Locally in `.dev.vars`, in production as a Worker secret.                                              |
+| `VITE_OSM_ENV`     | at build time, by Vite   | `dev` to upload changes to the OSM test API (`master.apis.dev.openstreetmap.org`) instead of production.                 |
+| `OVERPASS_URL`     | at build time, by Vite   | Overpass interpreter URL(s), comma-separated, to use instead of the public servers. The server must allow CORS.          |
 
-Les variables lues au build doivent être définies dans l'environnement de build (fichier `.env` en local, variables de build de Cloudflare en production), pas seulement à l'exécution.
+Variables read at build time must be defined in the build environment (`.env` file locally, Cloudflare build variables in production), not only at runtime.
 
-> ⚠️ Par défaut, l'application publie sur **l'OpenStreetMap de production**. Pour faire des essais d'envoi, utilisez `VITE_OSM_ENV=dev` avec un compte sur l'API de test.
+> ⚠️ By default, the app publishes to the **production OpenStreetMap**. To try uploads, use `VITE_OSM_ENV=dev` with an account on the test API.
 
-## Déploiement
+## Credits
 
-L'application est déployée sur **Cloudflare Workers** par Workers Builds, connecté au dépôt GitHub :
-
-| Réglage | Valeur |
-|---|---|
-| Nom du Worker | `osmtree` (doit correspondre au `name` de `wrangler.toml`) |
-| Build command | `npm run build` |
-| Deploy command | `npx wrangler deploy` |
-| Non-production branch deploy command | `npx wrangler versions upload` |
-
-Chaque push sur `main` déploie en production sur `osmtree.<sous-domaine>.workers.dev`. Les autres branches produisent une URL de preview. La connexion OSM n'y fonctionne pas, car leur URL n'est pas déclarée dans l'application OAuth.
-
-À configurer une fois :
-
-1. Le secret Pl@ntNet : `npx wrangler secret put PLANTNET_API_KEY`, ou dans le dashboard du Worker (Settings, puis Variables and Secrets, en type Secret).
-2. L'URL de production dans les **Redirect URIs** de l'application OAuth2 sur openstreetmap.org (et sur l'API de test si `VITE_OSM_ENV=dev`).
-
-## Contribuer
-
-- TypeScript strict, composants React fonctionnels, un fichier CSS par composant.
-- Mobile first : concevoir et tester les écrans pour un téléphone en mode portrait. Pas de style spécifique desktop.
-- Indentation de 4 espaces, pas de point-virgule.
-- Interface et messages utilisateur en français.
-- Commits au format conventionnel : `feat: ...`, `fix: ...`, `chore: ...`.
-
-Le projet n'a pas encore de tests automatisés. Avant de proposer une modification, lancez au minimum `npm run build`.
-
-## Crédits
-
-- Données : © les contributeurs d'[OpenStreetMap](https://www.openstreetmap.org/copyright), ODbL
-- Identification : [Pl@ntNet](https://plantnet.org)
-- Fonds de carte : [IGN](https://geoservices.ign.fr) BD ORTHO®, [Jawg Maps](https://www.jawg.io)
+- Data: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, ODbL
+- Identification: [Pl@ntNet](https://plantnet.org)
+- Base maps: [IGN](https://geoservices.ign.fr) BD ORTHO®, [Jawg Maps](https://www.jawg.io)

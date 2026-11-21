@@ -37,6 +37,7 @@ export type PlantNetCandidate = {
     genus: string
     species: string
     localizedSpecies: string
+    gbifId: string // GBIF taxon id ('' if unknown), used to find the Wikidata item
     selected: boolean
 }
 
