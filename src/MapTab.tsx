@@ -46,7 +46,7 @@ import { getBounds, getNatural, getNaturalLabel } from './utils'
 import { EditableFeature, MapTabParams, OverpassFeature } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
-import { FeatureMarkersContext, MapContext, SelectedFeatureContext, UploadedContext } from './contexts'
+import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
 import { getOverpassData } from './Overpass'
 
@@ -58,6 +58,14 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
     const featureMarkers = useContext(FeatureMarkersContext)
     const selectedFeature = useContext(SelectedFeatureContext)
+    const osmConnection = useContext(OSMConnectionContext)
+    // read from the marker click handlers, registered once (frozen closures)
+    const editedFeaturesRef = useRef(osmConnection.value.editedFeatures)
+    useEffect(() => {
+        editedFeaturesRef.current = osmConnection.value.editedFeatures
+    })
+    // features deleted from OSM: never redraw them from (possibly outdated) Overpass data
+    const deletedIds = useRef(new Set<number>())
     const uploaded = useContext(UploadedContext)
     const mapContext = useContext(MapContext)
 
@@ -103,6 +111,10 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     }
 
     useEffect(() => {
+        const reloadedIds = new Set(uploaded.value.features.map((feature) => feature.id))
+        for (const id of uploaded.value.idsToDelete) {
+            if (id > 0 && !reloadedIds.has(id)) deletedIds.current.add(id)
+        }
         loadFeatures(uploaded.value.features, uploaded.value.idsToDelete)
     }, [uploaded])
 
@@ -248,7 +260,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
         console.log(`loadFeatures with ${features.length} features`)
         for (const feature of features) {
-            if (!(feature.id in featureMarkersCopy) && feature.properties.natural) {
+            if (!(feature.id in featureMarkersCopy) && !deletedIds.current.has(feature.id) && feature.properties.natural) {
                 const element = document.createElement('div')
                 element.className = 'feature-marker'
                 const icon = document.createElement('img')
@@ -312,9 +324,13 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             }
             // select the feature
             console.log('map: select feature', featureMarker.feature.id)
+            // a feature already in the upload queue shows its pending changes (copy, applied on validation)
+            const queued = editedFeaturesRef.current[id]
             selectedFeature.setValue({
                 feature: featureMarker.feature,
-                editingProperties: editingProperties ?? new EditingProperties(featureMarker.feature)
+                editingProperties: editingProperties
+                    ?? queued?.editingProperties.clone(featureMarker.feature)
+                    ?? new EditingProperties(featureMarker.feature)
             })
         }
     }
@@ -415,12 +431,13 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
     // select a feature (e.g. an edited feature from UploadTab) and center the map on it
     const focusFeature = (editableFeature: EditableFeature) => {
-        const { feature, editingProperties } = editableFeature
+        const { feature } = editableFeature
+        const editingProperties = editableFeature.editingProperties.clone(feature)
         unselectFeature()
         if (feature.id in featureMarkers.value) {
             selectFeature(feature.id, editingProperties)
         } else { // no marker (e.g. feature without position): select it anyway
-            selectedFeature.setValue(editableFeature)
+            selectedFeature.setValue({ feature, editingProperties })
         }
 
         // edited position first, then the original one ([0, 0] means no position)

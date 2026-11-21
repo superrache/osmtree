@@ -10,6 +10,7 @@ export type EditingProperty = {
 export class EditingProperties {
     props: EditingProperty[]
     newPosition: LngLat | undefined
+    deleted: boolean // the whole feature is to be deleted from OSM
 
     constructor(feature: OverpassFeature) {
         this.props = []
@@ -22,6 +23,24 @@ export class EditingProperties {
         }
         this.props.push({key: '', tag: '', status: 'new'})
         this.newPosition = undefined
+        this.deleted = false
+    }
+
+    // independent copy, so that editing a queued feature doesn't change editedFeatures until validation
+    clone(feature: OverpassFeature): EditingProperties {
+        const copy = new EditingProperties(feature)
+        copy.props = this.props.map((prop) => ({...prop}))
+        copy.newPosition = this.newPosition
+        copy.deleted = this.deleted
+        return copy
+    }
+
+    isDeleted(): boolean {
+        return this.deleted
+    }
+
+    setDeleted(deleted: boolean) {
+        this.deleted = deleted
     }
 
     deleteKey(key: string): void {

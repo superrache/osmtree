@@ -1,8 +1,8 @@
 import { useContext } from 'react'
 import './AttributesTab.css'
-import { OSMConnectionContext, SelectedFeatureContext } from './contexts'
+import { FeatureMarkersContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import AutocompleteInput from './AutocompleteInput'
-import { AttributesTabParams } from './types'
+import { AttributesTabParams, EditableFeature } from './types'
 import { EditingProperties } from './EditingProperties'
 
 // FIXME: bug: create an existing key with the last line
@@ -11,6 +11,8 @@ import { EditingProperties } from './EditingProperties'
 const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
     const selectedFeature = useContext(SelectedFeatureContext)
     const osmConnection = useContext(OSMConnectionContext)
+    const featureMarkers = useContext(FeatureMarkersContext)
+    const uploaded = useContext(UploadedContext)
 
     const tagInfoInstance = 'https://taginfo.openstreetmap.org'
 
@@ -91,6 +93,52 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
         }
     }
 
+    // replace the upload queue entry of a feature (undefined: remove it from the queue)
+    const setEditedFeature = (id: number, editableFeature: EditableFeature | undefined) => {
+        const editedFeatures = {...osmConnection.value.editedFeatures}
+        if (editableFeature === undefined) delete editedFeatures[id]
+        else editedFeatures[id] = editableFeature
+        osmConnection.setValue({
+            userName: osmConnection.value.userName,
+            auth: osmConnection.value.auth,
+            osmRequest: osmConnection.value.osmRequest,
+            editedFeatures: editedFeatures
+        })
+    }
+
+    const onDeleteFeature = () => {
+        if (selectedFeature.value === null) return
+        const { feature, editingProperties } = selectedFeature.value
+        const isNew = feature.id < 0
+        const question = isNew ? 'Supprimer ce nouvel élément ?'
+            : 'Supprimer cet élément d\'OpenStreetMap ?\nLa suppression sera envoyée avec le prochain groupe de modification.'
+        if (!window.confirm(question)) return
+
+        const markerElement = featureMarkers.value[feature.id]?.getElement()
+        markerElement?.classList.remove('feature-marker-selected')
+        if (isNew) {
+            // never sent to OSM: just forget it (MapTab removes the marker)
+            setEditedFeature(feature.id, undefined)
+            uploaded.setValue({ features: [], idsToDelete: [feature.id] })
+        } else {
+            // queue the deletion, sent with the next changeset
+            editingProperties.setDeleted(true)
+            setEditedFeature(feature.id, { feature, editingProperties })
+            markerElement?.classList.add('feature-marker-deleted')
+        }
+        selectedFeature.setValue(null)
+    }
+
+    const onRestoreFeature = () => {
+        if (selectedFeature.value === null) return
+        const { feature, editingProperties } = selectedFeature.value
+        editingProperties.setDeleted(false)
+        // keep the feature in the queue only if it has other changes
+        setEditedFeature(feature.id, editingProperties.getChangedCount() > 0 ? { feature, editingProperties } : undefined)
+        featureMarkers.value[feature.id]?.getElement().classList.remove('feature-marker-deleted')
+        updateVueFromModel()
+    }
+
     const onValidate = () => {
         if (selectedFeature.value !== null && selectedFeature.value.feature.id ) {
             // send the selected feature to osmConnection.editedFeatures
@@ -125,7 +173,13 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                 </table>
                 <span>Connecte-toi à OpenStreetMap pour éditer les attributs</span>
             </div>}
-            {osmConnection.value.auth.authenticated() && selectedFeature.value !== null && <div>
+            {osmConnection.value.auth.authenticated() && selectedFeature.value !== null && selectedFeature.value.editingProperties.isDeleted() && <div>
+                <p>Cet élément sera supprimé d'OpenStreetMap lors du prochain envoi.</p>
+                <div className="buttons">
+                    <button onClick={onRestoreFeature}>Annuler la suppression</button>
+                </div>
+            </div>}
+            {osmConnection.value.auth.authenticated() && selectedFeature.value !== null && !selectedFeature.value.editingProperties.isDeleted() && <div>
                 <table>
                     <thead><tr><th>Clé</th><th>=</th><th>Valeur</th></tr></thead>
                     {selectedFeature.value && selectedFeature.value.editingProperties.getProps().map((prop, index) => (
@@ -147,6 +201,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                         && selectedFeature.value.feature.geometry.coordinates[0] === 0)
                         || selectedFeature.value.editingProperties.getChangedCount() === 0}>Valider</button>
                     <button onClick={onCancel}>Annuler</button>
+                    <button className="delete-feature" onClick={onDeleteFeature}>Supprimer</button>
                 </div>
             </div>}
         </div>

@@ -32,19 +32,23 @@ const UploadTab = ({osmLogin, osmLogout, onShowFeature}: UploadTabParams) => {
 
     useEffect(() => {
         // generate a comment from editedFeatures
-        let news = 0, updates = 0
+        let news = 0, updates = 0, deletions = 0
         const typeNames = new Set<string>()
         for (const feature of Object.values(osmConnection.value.editedFeatures)) {
             if (feature.feature.id < 0) news++
+            else if (feature.editingProperties.isDeleted()) deletions++
             else updates++
             const natural = getNatural(feature)
             if (natural && natural in naturalTypes) {
                 typeNames.add(naturalTypes[natural].label.toLowerCase())
             }
         }
-        if (news > 0 || updates > 0) {
-            let changeType = news > 0 ? 'ajout' : ''
-            changeType += updates > 0 ? `${changeType.length > 0 ? ' /' : ''} mise à jour` : ''
+        if (news > 0 || updates > 0 || deletions > 0) {
+            const changeType = [
+                news > 0 ? 'ajout' : '',
+                updates > 0 ? 'mise à jour' : '',
+                deletions > 0 ? 'suppression' : ''
+            ].filter((type) => type !== '').join(' / ')
             const featureCount = Object.keys(osmConnection.value.editedFeatures).length
             const plurial = featureCount > 1
             const names = Array.from(typeNames).join(plurial ? 's, ' : ', ') + (plurial ? 's' : '')
@@ -72,6 +76,26 @@ const UploadTab = ({osmLogin, osmLogout, onShowFeature}: UploadTabParams) => {
                 const newPosition = feature.editingProperties.getNewPosition() // LngLat or undefined
                 const coordsLatLng = newPosition ? [newPosition.lat, newPosition.lng] : undefined
                 const tags = feature.editingProperties.getTagsToSend() // only new/modified/unmodified not empty tags
+
+                if (feature.editingProperties.isDeleted()) {
+                    if (isNew) continue // never sent to OSM, nothing to delete
+                    const osmId = `node/${oldId}`
+                    // the API refuses to delete a node used by a way or a relation
+                    const ways = await osmRequest.fetchWaysForNode(osmId)
+                    const relations = await osmRequest.fetchRelationsForElement(osmId)
+                    if (ways.length > 0 || relations.length > 0) {
+                        appendLog(`Suppression impossible : l'élément est utilisé par ${ways.length} chemin(s) et ${relations.length} relation(s), ignoré`)
+                        // redraw it as a regular feature
+                        idsToDelete.push(oldId)
+                        uploadedFeatures.push({...feature.feature, properties: {...feature.feature.properties}})
+                        continue
+                    }
+                    const element = await osmRequest.fetchElement(osmId)
+                    appendLog('Suppression de l\'élément')
+                    await osmRequest.deleteElement(element, changesetId)
+                    idsToDelete.push(oldId) // removed from the map, not recreated
+                    continue
+                }
 
                 if (isNew) {
                     if (coordsLatLng === undefined) {
@@ -153,7 +177,7 @@ const UploadTab = ({osmLogin, osmLogout, onShowFeature}: UploadTabParams) => {
                 {Object.keys(osmConnection.value.editedFeatures).length === 0 && <div>Aucun</div>}
                 {Object.keys(osmConnection.value.editedFeatures).length > 0 && <ul>
                     {Object.values(osmConnection.value.editedFeatures).map((feature, index) => {
-                        return <li key={index} onClick={() => onEditedFeatureClick(feature.feature.id)}><a>{getNatural(feature)} {feature.feature.id < 0 ? `(nouveau ${-feature.feature.id})` : feature.feature.id}</a></li>
+                        return <li key={index} onClick={() => onEditedFeatureClick(feature.feature.id)}><a>{getNatural(feature)} {feature.feature.id < 0 ? `(nouveau ${-feature.feature.id})` : feature.feature.id}{feature.editingProperties.isDeleted() && ' (suppression)'}</a></li>
                     })}
                 </ul>}
                 <br/>
