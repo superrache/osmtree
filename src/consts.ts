@@ -47,6 +47,20 @@ export const expectedTags: ExpectedTag[] = [
     { label: 'genus', key: 'genus', pattern: /^genus$/ }
 ]
 
+// specific to one feature: never copied to another one (Dupliquer)
+export const notDuplicatedKeys = [
+    'name',
+    'ref',
+    'note',
+    'fixme',
+    'description',
+    'image',
+    'wikidata',
+    'wikipedia',
+    'survey:date',
+    'check_date'
+]
+
 export const combinations: Record<string, Combination> = {
     'denotation': {
         label: 'Dénotation',

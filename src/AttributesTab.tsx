@@ -10,23 +10,10 @@ import AutocompleteInput from "./AutocompleteInput";
 import { AttributesTabParams, EditableFeature } from "./types";
 import { EditingProperties } from "./EditingProperties";
 import { getMissingExpectedTags } from "./utils";
+import { notDuplicatedKeys } from "./consts";
 
 // FIXME: bug: create an existing key with the last line
 // FIXME: bug: delete a key then recreate it with the last line
-
-// specific to one feature: never copied to another one
-const notDuplicatedKeys = [
-  "name",
-  "ref",
-  "note",
-  "fixme",
-  "description",
-  "image",
-  "wikidata",
-  "wikipedia",
-  "survey:date",
-  "check_date",
-];
 
 const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
   const selectedFeature = useContext(SelectedFeatureContext);
@@ -136,11 +123,14 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
   const getCancelableCount = (): number => {
     if (selectedFeature.value === null) return 0;
     const { feature, editingProperties } = selectedFeature.value;
-    const keptPosition =
-      feature.id < 0 && editingProperties.getNewPosition() !== undefined
-        ? 1
-        : 0;
-    return editingProperties.getChangedCount() - keptPosition;
+    if (feature.id < 0) {
+      // its tags are all 'new': compare with its initial tags
+      const initial = new EditingProperties(feature).getTagsToSend();
+      const current = editingProperties.getTagsToSend();
+      const keys = new Set([...Object.keys(initial), ...Object.keys(current)]);
+      return [...keys].filter((key) => initial[key] !== current[key]).length;
+    }
+    return editingProperties.getChangedCount();
   };
 
   const onCancel = () => {

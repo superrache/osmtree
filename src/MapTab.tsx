@@ -3,6 +3,7 @@ import logo from '/osmtree.svg' // also favicon
 import confirmImg from './assets/confirm.svg'
 import cancelImg from './assets/cancel.svg'
 import crossImg from './assets/cross.svg'
+import copyImg from './assets/copy.svg'
 import layersImg from './assets/layers.svg'
 /*import tree1Img from './assets/collection/1.svg'
 import tree2Img from './assets/collection/2.svg'
@@ -44,7 +45,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getNatural, getNaturalLabel, getSpeciesName, getTagsCompleteness } from './utils'
 import { EditableFeature, MapTabParams, OverpassFeature } from './types'
-import { naturalTypes, osmConfig } from './consts'
+import { naturalTypes, notDuplicatedKeys, osmConfig } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
@@ -77,6 +78,8 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const loadController = useRef<AbortController | null>(null)
     const [creatingPosition, setCreatingPosition] = useState<boolean>(false)
     const [locateSelectedFeature, setLocateSelectedFeature] = useState<boolean>(false)
+    // tags of the feature being duplicated (Dupliquer button), given to the new feature once placed
+    const duplicatedTags = useRef<Record<string, string> | null>(null)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
     const [autoBearing, setAutoBearing] = useState<boolean>(false)
     const [mapStyle, setMapStyle] = useState<boolean>(false)
@@ -362,6 +365,19 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     }
 
     const onAddButtonClick = () => {
+        duplicatedTags.current = null
+        unselectFeature()
+        setCreatingPosition(true)
+        setLocateSelectedFeature(false)
+        zoomFocus(18, true)
+    }
+
+    // place a copy of the selected feature (its edited tags, without the feature specific ones)
+    const onDuplicateButtonClick = () => {
+        if (selectedFeature.value === null) return
+        const tags = selectedFeature.value.editingProperties.getTagsToSend()
+        for (const key of notDuplicatedKeys) delete tags[key]
+        duplicatedTags.current = tags
         unselectFeature()
         setCreatingPosition(true)
         setLocateSelectedFeature(false)
@@ -369,6 +385,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     }
 
     const onCreatePositionCancel = () => {
+        duplicatedTags.current = null
         setCreatingPosition(false)
         zoomFocus(userZoom)
     }
@@ -376,6 +393,8 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const onCreatePositionConfirm = () => {
         setCreatingPosition(false)
         zoomFocus(userZoom)
+        const tags = duplicatedTags.current
+        duplicatedTags.current = null
 
         if (map.current) {
             const center = map.current.getCenter()
@@ -399,7 +418,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                     id: selectedFeature.getNewId(),
                     type: 'Feature',
                     geometry: pointGeom,
-                    properties: {natural: 'tree'}
+                    properties: tags !== null ? { natural: 'tree', ...tags } : { natural: 'tree' }
                 }
                 loadFeatures([feature])
                 // set new position
@@ -579,8 +598,13 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 Données indisponibles <button onClick={loadVisibleData}>Réessayer</button>
             </div> }
             { !creatingPosition && <div className="creating-position-buttons">
-                <button className="creating-position-button" onClick={onAddButtonClick}>
+                <button className="creating-position-button" onClick={onAddButtonClick} title='Ajouter un élément'>
                     <img src={crossImg} width='50' />
+                </button>
+                <button className="creating-position-button duplicate-button" onClick={onDuplicateButtonClick}
+                    disabled={selectedFeature.value === null}
+                    title="Dupliquer l'élément sélectionné">
+                    <img src={copyImg} alt='' />
                 </button>
             </div> }
             { creatingPosition && <div className="creating-position-buttons">
