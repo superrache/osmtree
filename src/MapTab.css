@@ -104,7 +104,7 @@
 .feature-marker::before {
     content: '';
     position: absolute;
-    inset: -7px;
+    inset: -5px;
     border-radius: 100%;
     background: conic-gradient(white var(--completeness, 0deg), rgba(0, 0, 0, 0.45) 0);
     z-index: -2;
@@ -123,7 +123,7 @@
 /* outside the pie, so that it stays visible */
 .feature-marker-selected {
     outline: 4px solid #ff9454;
-    outline-offset: 7px;
+    outline-offset: 5px;
 }
 
 .creating-position-buttons {
@@ -131,11 +131,27 @@
     right: 50px;
     bottom: 50px;
     z-index: 1000;
+    display: flex;
+    gap: 12px;
 }
 
+/* round buttons: fixed square size, icon centred (a block img has no baseline gap) */
 .creating-position-button {
-    border-radius: 60px;
-    padding: 10px 10px 10px 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 64px;
+    height: 64px;
+    margin: 0;
+    padding: 0;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.creating-position-button img {
+    display: block;
+    width: 40px;
+    height: 40px;
 }
 
 .cross-marker {
@@ -158,6 +174,18 @@
     top: 224px;
     right: 10px;
     z-index: 7000;
+}
+
+.switch-map-style button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.switch-map-style img {
+    display: block;
+    width: 22px;
+    height: 22px;
 }
 
 .load-error {

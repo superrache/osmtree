@@ -89,6 +89,25 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
     //const treeImgs = [tree1Img, tree2Img, tree3Img, tree4Img, tree5Img, tree6Img, tree7Img, tree8Img, tree9Img, tree10Img, tree11Img, tree12Img, tree13Img, tree14Img, tree15Img, tree16Img, tree17Img, tree18Img, tree19Img, tree20Img, tree21Img, tree22Img, tree23Img, tree24Img, tree25Img, tree26Img, tree27Img, tree28Img, tree29Img, tree30Img, tree31Img]
 
+    // French tooltips and labels of the MapLibre controls (default: English)
+    const mapLocale: Record<string, string> = {
+        'AttributionControl.ToggleAttribution': 'Afficher ou masquer les crédits',
+        'AttributionControl.MapFeedback': 'Signaler une erreur sur la carte',
+        'FullscreenControl.Enter': 'Plein écran',
+        'FullscreenControl.Exit': 'Quitter le plein écran',
+        'GeolocateControl.FindMyLocation': 'Me localiser',
+        'GeolocateControl.LocationNotAvailable': 'Position indisponible',
+        'LogoControl.Title': 'Logo MapLibre',
+        'Map.Title': 'Carte',
+        'Marker.Title': 'Marqueur',
+        'NavigationControl.ResetBearing': 'Réorienter la carte vers le nord',
+        'NavigationControl.ZoomIn': 'Zoomer',
+        'NavigationControl.ZoomOut': 'Dézoomer',
+        'Popup.Close': 'Fermer',
+        'ScaleControl.Meters': 'm',
+        'ScaleControl.Kilometers': 'km'
+    }
+
     const orthoStyle: StyleSpecification = {
         version: 8,
         name: "bdortho",
@@ -467,6 +486,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 center: [lng, lat],
                 zoom: zoom,
                 hash: true,
+                locale: mapLocale,
                 attributionControl: false // added below, with the OSM credit
             })
 
@@ -538,6 +558,8 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
                     <button className='maplibregl-ctrl-compass'
                         onClick={() => { setAutoBearing(!autoBearing) }}
+                        title={`Orientation automatique de la carte selon la boussole : ${autoBearing ? 'activée' : 'désactivée'}`}
+                        aria-pressed={autoBearing}
                         style={{color: autoBearing ? 'blue' : 'grey'}}>
                         B
                     </button>
@@ -548,7 +570,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                     <button className='maplibregl-ctrl-compass'
                         onClick={switchMapStyle}
                         style={{border: mapStyle ? '2px solid #ff9454' : 'none'}}>
-                        <img src={layersImg} width='15' />
+                        <img src={layersImg} alt='' />
                     </button>
                 </div>
             }
