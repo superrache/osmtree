@@ -36,7 +36,7 @@ import tree29Img from './assets/collection/29.svg'
 import tree30Img from './assets/collection/30.svg'
 import tree31Img from './assets/collection/31.svg'*/
 import type { Point } from 'geojson'
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, setWorkerUrl } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, AttributionControl, setWorkerUrl } from 'maplibre-gl'
 // maplibre-gl 6 resolves its worker relative to import.meta.url, which breaks once Vite bundles it
 // (dev: .vite/deps, prod: assets/). Let Vite serve/emit the worker file and give its URL explicitly.
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
@@ -109,6 +109,19 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 maxzoom: 22
             }
         ]
+    }
+
+    // the OSM credit is always shown (AttributionControl's customAttribution):
+    // remove the style's own OSM link, e.g. Jawg's "© JawgMaps | © OpenStreetMap"
+    const withoutOsmAttribution = (style: StyleSpecification): StyleSpecification => {
+        const osmLink = /\s*\|?\s*<a [^>]*openstreetmap\.org\/copyright[^>]*>.*?<\/a>/g
+        const sources = Object.fromEntries(Object.entries(style.sources).map(([id, source]) => [
+            id,
+            'attribution' in source && source.attribution !== undefined
+                ? { ...source, attribution: source.attribution.replace(osmLink, '').trim() }
+                : source
+        ]))
+        return { ...style, sources: sources as StyleSpecification['sources'] }
     }
 
     const onMapLoad = () => {
@@ -394,7 +407,9 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         const newMapStyle = !mapStyle
         if (map.current) {
             if (newMapStyle) {
-                map.current.setStyle('https://api.jawg.io/styles/77df562c-113e-451b-bc77-1634aedeee25.json?access-token=UG9wQV1RcEgsXwkTX9M9qfBUV0ZckAfUhlqa3W4hK16gVbTFDUSMXrn60H1hEE6d')
+                map.current.setStyle('https://api.jawg.io/styles/77df562c-113e-451b-bc77-1634aedeee25.json?access-token=UG9wQV1RcEgsXwkTX9M9qfBUV0ZckAfUhlqa3W4hK16gVbTFDUSMXrn60H1hEE6d', {
+                    transformStyle: (_previous, next) => withoutOsmAttribution(next)
+                })
             } else {
                 map.current.setStyle(orthoStyle)
             }
@@ -443,8 +458,15 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 style: orthoStyle,
                 center: [lng, lat],
                 zoom: zoom,
-                hash: true
+                hash: true,
+                attributionControl: false // added below, with the OSM credit
             })
+
+            // the trees come from OSM whatever the background: credit it with every style
+            // (customAttribution doesn't depend on the style's sources: it survives setStyle)
+            map.current.addControl(new AttributionControl({
+                customAttribution: "<a href='https://www.openstreetmap.org/copyright' target='_blank'>&copy; les contributeurs d'OpenStreetMap</a>"
+            }))
 
             map.current.addControl(
                 new NavigationControl({
