@@ -13,9 +13,6 @@ import { getMissingExpectedTags } from "./utils";
 import { notDuplicatedKeys } from "./consts";
 import { t } from "./i18n";
 
-// FIXME: bug: create an existing key with the last line
-// FIXME: bug: delete a key then recreate it with the last line
-
 const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
   const selectedFeature = useContext(SelectedFeatureContext);
   const osmConnection = useContext(OSMConnectionContext);
@@ -27,10 +24,10 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
 
   const tagInfoInstance = "https://taginfo.openstreetmap.org";
 
-  const onDeleteTag = (key: string) => {
-    if (selectedFeature.value && key !== "") {
-      // don't delete new key/value ''/''
-      selectedFeature.value.editingProperties.deleteKey(key);
+  const onDeleteTag = (index: number) => {
+    if (selectedFeature.value) {
+      // the empty last line stays (EditingProperties.deleteAt)
+      selectedFeature.value.editingProperties.deleteAt(index);
       updateVueFromModel();
     }
   };
@@ -58,56 +55,25 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
     return suggestions;
   };
 
-  const onInputChange = (
-    value: string,
-    other: string | null,
-    newVal: string,
-  ) => {
+  // edit one line of the table (by index: a key may be typed again on the last line,
+  // e.g. an existing or deleted one, without touching the other lines)
+  const onInputChange = (index: number, isValue: boolean, newVal: string) => {
     if (selectedFeature.value === null) return;
     if (newVal === "") return; // no change
-    if (value === newVal) return; // no change
-
-    const isValue = other !== null; // else is key
-
-    // console.log(`onInputChange ${isValue ? 'value' : 'key'} ${value} ${isValue ? other : ''} => ${newVal}`)
-
-    let updateModel = false;
-    if (isValue) {
-      // update a tag value
-      if (value !== newVal) {
-        // value changed
-        // update the value
-        selectedFeature.value.editingProperties.modifyValue(other, newVal);
-        // need update
-        updateModel = true;
-      }
-    } else {
-      // value is a key
-      if (value !== newVal) {
-        // key changed
-        selectedFeature.value.editingProperties.modifyKey(value, newVal);
-        updateModel = true;
-      }
-    }
-    if (updateModel) {
-      updateVueFromModel();
-    }
+    const editingProperties = selectedFeature.value.editingProperties;
+    const prop = editingProperties.getProps()[index];
+    if (prop === undefined) return;
+    if (newVal === (isValue ? prop.tag : prop.key)) return; // no change
+    if (isValue) editingProperties.setTagAt(index, newVal);
+    else editingProperties.setKeyAt(index, newVal);
+    updateVueFromModel();
   };
 
   // add a missing expected key as a table line, its value to be typed
   const onAddExpectedKey = (key: string) => {
     if (selectedFeature.value === null) return;
-    const editingProperties = selectedFeature.value.editingProperties;
-    const existing = editingProperties
-      .getProps()
-      .find((prop) => prop.key === key);
-    if (existing === undefined) {
-      editingProperties.modifyKey("", key); // fills the last empty line
-    } else if (existing.status === "deleted") {
-      editingProperties.modifyValue(key, existing.tag); // restores the deleted tag
-    } else {
-      return; // already in the table, value still empty
-    }
+    // fills the empty last line, or restores the deleted tag
+    selectedFeature.value.editingProperties.addKey(key);
     updateVueFromModel();
   };
 
@@ -210,15 +176,8 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
     const tags: Record<string, string> = {};
     for (const [key, value] of Object.entries(previousFeature.tags)) {
       if (notDuplicatedKeys.includes(key)) continue;
-      const current = editingProperties
-        .getProps()
-        .find((prop) => prop.key === key);
-      if (
-        current === undefined ||
-        current.tag !== value ||
-        current.status === "deleted"
-      )
-        tags[key] = value;
+      // missing, deleted or different
+      if (editingProperties.getValue(key) !== value) tags[key] = value;
     }
     return tags;
   };
@@ -305,7 +264,9 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
                             value={prop.key}
                             other={null}
                             suggestionsFunction={onInputKey}
-                            onValueChange={onInputChange}
+                            onValueChange={(_value, _other, newVal) =>
+                              onInputChange(index, false, newVal)
+                            }
                           />
                         </td>
                         <td>=</td>
@@ -314,13 +275,13 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
                             value={prop.tag}
                             other={prop.key}
                             suggestionsFunction={onInputValue}
-                            onValueChange={onInputChange}
+                            onValueChange={(_value, _other, newVal) =>
+                              onInputChange(index, true, newVal)
+                            }
                           />
                         </td>
                         <td>
-                          <button onClick={() => onDeleteTag(prop.key)}>
-                            x
-                          </button>
+                          <button onClick={() => onDeleteTag(index)}>x</button>
                         </td>
                       </tr>
                     </tbody>

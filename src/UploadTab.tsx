@@ -10,6 +10,10 @@ import { buildChangesetComment, CommentedEdit } from "./changesetComment";
 import { getNatural, getNaturalLabel } from "./utils";
 import { Lang, lang, languages, setLanguage, t } from "./i18n";
 
+// readable message of an osm-request error (Error, or the API response text)
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   const osmConnection = useContext(OSMConnectionContext);
   const uploaded = useContext(UploadedContext);
@@ -22,6 +26,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   } | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [lastChangesetId, setLastChangesetId] = useState<number>(0);
+  const [sending, setSending] = useState<boolean>(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   const resetLogs = async () => {
@@ -72,22 +77,25 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   };
 
   const onSend = async () => {
+    if (sending) return;
+    setSending(true);
     resetLogs();
-    appendLog(
-      t("upload.log.start", {
-        n: Object.keys(osmConnection.value.editedFeatures).length,
-      }),
-    );
+    const editedFeatures = osmConnection.value.editedFeatures;
+    appendLog(t("upload.log.start", { n: Object.keys(editedFeatures).length }));
     const osmRequest = osmConnection.value.osmRequest;
 
-    const changesetId = await osmRequest.createChangeset("osmtree", comment);
-    appendLog(t("upload.log.changeset", { id: changesetId }));
-
+    let changesetId: string | undefined;
     const uploadedFeatures: OverpassFeature[] = [];
     const idsToDelete: number[] = [];
+    // features handled (sent, or nothing to send): they leave the queue, the others stay
+    const doneIds = new Set<number>();
 
-    for (const feature of Object.values(osmConnection.value.editedFeatures)) {
-      if (feature.feature.id) {
+    try {
+      changesetId = await osmRequest.createChangeset("osmtree", comment);
+      appendLog(t("upload.log.changeset", { id: changesetId }));
+
+      for (const feature of Object.values(editedFeatures)) {
+        if (!feature.feature.id) continue;
         const oldId = feature.feature.id;
         appendLog(t("upload.log.element", { id: oldId }));
         const isNew = oldId < 0;
@@ -99,7 +107,10 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
         const tags = feature.editingProperties.getTagsToSend(); // only new/modified/unmodified not empty tags
 
         if (feature.editingProperties.isDeleted()) {
-          if (isNew) continue; // never sent to OSM, nothing to delete
+          if (isNew) {
+            doneIds.add(oldId); // never sent to OSM, nothing to delete
+            continue;
+          }
           const osmId = `node/${oldId}`;
           // the API refuses to delete a node used by a way or a relation
           const ways = await osmRequest.fetchWaysForNode(osmId);
@@ -112,6 +123,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
               }),
             );
             // redraw it as a regular feature
+            doneIds.add(oldId);
             idsToDelete.push(oldId);
             uploadedFeatures.push({
               ...feature.feature,
@@ -122,6 +134,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           const element = await osmRequest.fetchElement(osmId);
           appendLog(t("upload.log.deleteElement"));
           await osmRequest.deleteElement(element, changesetId);
+          doneIds.add(oldId);
           idsToDelete.push(oldId); // removed from the map, not recreated
           continue;
         }
@@ -130,15 +143,14 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           if (coordsLatLng === undefined) {
             appendLog(t("upload.log.noCoordinates"));
             continue;
-          } else {
-            const element = await osmRequest.createNodeElement(
-              coordsLatLng[0],
-              coordsLatLng[1],
-              tags,
-            );
-            newId = Number(await osmRequest.sendElement(element, changesetId));
-            appendLog(t("upload.log.newId", { id: newId }));
           }
+          const element = await osmRequest.createNodeElement(
+            coordsLatLng[0],
+            coordsLatLng[1],
+            tags,
+          );
+          newId = Number(await osmRequest.sendElement(element, changesetId));
+          appendLog(t("upload.log.newId", { id: newId }));
         } else {
           let element = await osmRequest.fetchElement(`node/${oldId}`); // id au format node/123456789
           // update coordinates
@@ -148,12 +160,10 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
               coordsLatLng[0],
               coordsLatLng[1],
             );
-          // tags to delete
-          for (const prop of feature.editingProperties.getProps()) {
-            if (prop.status === "deleted") {
-              appendLog(t("upload.log.deleteTag", { key: prop.key }));
-              element = osmRequest.removeTag(element, prop.key);
-            }
+          // tags to delete (deleted or renamed keys)
+          for (const key of feature.editingProperties.getTagsToRemove()) {
+            appendLog(t("upload.log.deleteTag", { key: key }));
+            element = osmRequest.removeTag(element, key);
           }
           appendLog(t("upload.log.updateTags"));
           element = osmRequest.setTags(element, tags);
@@ -162,6 +172,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
         }
 
         // update the feature
+        doneIds.add(oldId);
         idsToDelete.push(oldId); // delete every uploaded feature before recreating
         uploadedFeatures.push({
           type: "Feature",
@@ -176,25 +187,48 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           properties: tags,
         });
       }
-    }
-    appendLog(t("upload.log.close"));
-    await osmRequest.closeChangeset(changesetId);
-    setLastChangesetId(Number(changesetId));
-    setCustomComment(null); // next changeset: automatic comment again
+    } catch (error) {
+      console.error("upload failed", error);
+      appendLog(t("upload.log.error", { message: errorMessage(error) }));
+    } finally {
+      // never leave the changeset open, even after an error
+      if (changesetId !== undefined) {
+        try {
+          appendLog(t("upload.log.close"));
+          await osmRequest.closeChangeset(changesetId);
+        } catch (error) {
+          console.error("closing the changeset failed", error);
+          appendLog(
+            t("upload.log.closeError", { message: errorMessage(error) }),
+          );
+        }
+        setLastChangesetId(Number(changesetId));
+      }
 
-    // reset data by setting empty editedFeatures...
-    osmConnection.setValue({
-      userName: osmConnection.value.userName,
-      editedFeatures: {},
-      auth: osmConnection.value.auth,
-      osmRequest: osmRequest,
-    });
-    // ...and updating features
-    // TODO: call MapTab.loadFeatures forcing update and deleting negative ids
-    uploaded.setValue({
-      features: uploadedFeatures,
-      idsToDelete: idsToDelete,
-    });
+      // the handled features leave the queue, the others stay (to be sent again)...
+      const remaining = Object.fromEntries(
+        Object.entries(editedFeatures).filter(
+          ([id]) => !doneIds.has(Number(id)),
+        ),
+      );
+      const remainingCount = Object.keys(remaining).length;
+      if (remainingCount > 0)
+        appendLog(t("upload.log.remaining", { n: remainingCount }));
+      else setCustomComment(null); // next changeset: automatic comment again
+      osmConnection.setValue({
+        userName: osmConnection.value.userName,
+        editedFeatures: remaining,
+        auth: osmConnection.value.auth,
+        osmRequest: osmRequest,
+      });
+      // ...and the map shows the uploaded features
+      // TODO: call MapTab.loadFeatures forcing update and deleting negative ids
+      uploaded.setValue({
+        features: uploadedFeatures,
+        idsToDelete: idsToDelete,
+      });
+      setSending(false);
+    }
   };
 
   // revert every queued change: new features disappear, the others are redrawn
@@ -308,7 +342,11 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
             )}
             {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
               <div>
-                <button className="cancel-all" onClick={onCancelAll}>
+                <button
+                  className="cancel-all"
+                  onClick={onCancelAll}
+                  disabled={sending}
+                >
                   {t("upload.cancelAll")}
                 </button>
               </div>
@@ -323,12 +361,13 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           />
           <button
             disabled={
+              sending ||
               Object.keys(osmConnection.value.editedFeatures).length === 0 ||
               comment.trim().length === 0
             }
             onClick={onSend}
           >
-            {t("upload.send")}
+            {sending ? t("upload.sending") : t("upload.send")}
           </button>
           <div ref={logContainerRef} className="logs">
             {logs.map((log, index) => (

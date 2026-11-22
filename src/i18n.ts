@@ -165,6 +165,10 @@ const fr = {
     'upload.log.updateTags': 'Mise à jour des autres tags',
     'upload.log.sendElement': "Envoi de l'élément",
     'upload.log.close': 'Fermeture du groupe de modification',
+    'upload.log.error': "Échec de l'envoi : {message}",
+    'upload.log.closeError': 'Échec de la fermeture du groupe de modification : {message}',
+    'upload.log.remaining': "{n} élément(s) non envoyé(s), toujours en attente d'envoi",
+    'upload.sending': 'Envoi en cours…',
 
     // wiki
     'wiki.wikipedia': 'Wikipédia',
@@ -290,6 +294,10 @@ const en: Messages = {
     'upload.log.updateTags': 'Updating the other tags',
     'upload.log.sendElement': 'Uploading the feature',
     'upload.log.close': 'Closing the changeset',
+    'upload.log.error': 'Upload failed: {message}',
+    'upload.log.closeError': 'Closing the changeset failed: {message}',
+    'upload.log.remaining': '{n} feature(s) not uploaded, still waiting to be uploaded',
+    'upload.sending': 'Uploading…',
 
     'wiki.wikipedia': 'Wikipedia',
     'wiki.wikidata': 'Wikidata',

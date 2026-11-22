@@ -54,6 +54,8 @@ import { getOverpassData } from './Overpass'
 
 setWorkerUrl(maplibreWorkerUrl)
 
+const orientationEventName = 'ondeviceorientationabsolute' in window ? 'deviceorientationabsolute' : 'deviceorientation'
+
 const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
@@ -61,6 +63,11 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
     const featureMarkers = useContext(FeatureMarkersContext)
     const selectedFeature = useContext(SelectedFeatureContext)
+    // read from the map and marker handlers, registered once (frozen closures)
+    const selectedFeatureRef = useRef(selectedFeature.value)
+    useEffect(() => {
+        selectedFeatureRef.current = selectedFeature.value
+    })
     const osmConnection = useContext(OSMConnectionContext)
     // read from the marker click handlers, registered once (frozen closures)
     const editedFeaturesRef = useRef(osmConnection.value.editedFeatures)
@@ -83,6 +90,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const duplicatedTags = useRef<Record<string, string> | null>(null)
     const [userZoom, setUserZoom] = useState<number>(16) // to save user zoom before enabling creatingPosition mode
     const [autoBearing, setAutoBearing] = useState<boolean>(false)
+    const autoBearingRef = useRef(false) // read by the deviceorientation handler, registered once
     const [mapStyle, setMapStyle] = useState<boolean>(false)
 
     const lng = -1.374801
@@ -153,11 +161,9 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             map.current.on('click', unselectFeature)
 
             if (window.DeviceOrientationEvent) {
-                window.addEventListener(
-                    "deviceorientation",
-                    handleOrientationEvent,
-                    true,
-                  )
+                // absolute (north) orientation: Chrome only gives it with deviceorientationabsolute,
+                // Safari with webkitCompassHeading on deviceorientation
+                window.addEventListener(orientationEventName, handleOrientationEvent, true)
             }
 
             // init map data
@@ -175,28 +181,43 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     }
 
     const handleOrientationEvent = (event: DeviceOrientationEvent) => {
-        if (map.current && autoBearing) {
-            // alpha : rotation autour de l'axe z
-            const rotateDegrees = event.alpha !== null ? event.alpha : 0
-            // gamma : de gauche à droite
-            //const leftToRight = event.gamma
-            // bêta : mouvement avant-arrière
-            //const frontToBack = event.beta
-            let bearing = rotateDegrees
-            // fix portrait/landscape phone orientation
-            if (screen.orientation.type === 'landscape-primary') bearing -= 90
-            if (screen.orientation.type === 'landscape-secondary') bearing += 90
-            if (screen.orientation.type === 'portrait-secondary') bearing += 180
-            if (Math.abs(bearing - map.current.getBearing()) > 1) {
-                map.current.setBearing(bearing).setPitch(45).setZoom(16)
+        if (!map.current || !autoBearingRef.current) return
+        const compassHeading = (event as DeviceOrientationEvent & { webkitCompassHeading?: number }).webkitCompassHeading
+        // alpha turns counterclockwise, the heading clockwise from the north
+        const heading = compassHeading ?? (event.absolute && event.alpha !== null ? 360 - event.alpha : null)
+        if (heading === null) return // no absolute orientation from this device
+        // the top of the screen points elsewhere in landscape or upside down
+        const bearing = heading + (screen.orientation?.angle ?? 0)
+        const delta = ((bearing - map.current.getBearing()) % 360 + 540) % 360 - 180 // -180..180
+        if (Math.abs(delta) > 1) map.current.setBearing(bearing)
+    }
+
+    const switchAutoBearing = async () => {
+        const enabled = !autoBearing
+        if (enabled) {
+            // iOS asks the user for the permission, from a click
+            const orientationEvent = window.DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> } | undefined
+            if (orientationEvent?.requestPermission !== undefined) {
+                try {
+                    if (await orientationEvent.requestPermission() !== 'granted') return
+                } catch (error) {
+                    console.error('device orientation permission', error)
+                    return
+                }
             }
+            map.current?.easeTo({ pitch: 45 })
+        } else {
+            map.current?.easeTo({ bearing: 0, pitch: 0 }) // back to north up
         }
+        autoBearingRef.current = enabled
+        setAutoBearing(enabled)
     }
 
     useEffect(() => {
         return () => { // unmount: stop pending work
             clearTimeout(moveTimer.current)
             loadController.current?.abort()
+            window.removeEventListener(orientationEventName, handleOrientationEvent, true)
         }
     }, [])
 
@@ -247,7 +268,8 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         if (idsToDeleteBeforeLoading.length > 0) {
             console.log(`delete ${idsToDeleteBeforeLoading.length} features`)
             // if a feature to delete is selected, reset selection
-            if (selectedFeature.value !== null && idsToDeleteBeforeLoading.includes(selectedFeature.value.feature.id)) {
+            const selected = selectedFeatureRef.current
+            if (selected !== null && idsToDeleteBeforeLoading.includes(selected.feature.id)) {
                 selectedFeature.setValue(null)
             }
             for (const id of idsToDeleteBeforeLoading) {
@@ -340,26 +362,25 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             console.log('map: select feature', featureMarker.feature.id)
             // a feature already in the upload queue shows its pending changes (copy, applied on validation)
             const queued = editedFeaturesRef.current[id]
-            selectedFeature.setValue({
+            const selection = {
                 feature: featureMarker.feature,
                 editingProperties: editingProperties
                     ?? queued?.editingProperties.clone(featureMarker.feature)
                     ?? new EditingProperties(featureMarker.feature)
-            })
+            }
+            selectedFeatureRef.current = selection
+            selectedFeature.setValue(selection)
         }
     }
 
+    // also the map click handler (registered once): read the selection from its ref
     const unselectFeature = () => {
-        console.log('map: unselectFeature', selectedFeature.value) // FIXME: why always null?
-        // if we had the selected id, we could target the good marker to unselect
-        // else we unselect every marker
-        /*if (selectedFeature.value !== null) {
-            const id = selectedFeature.value.feature.id
-            if (id && id in featureMarkers.value) featureMarkers.value[id].getElement().classList.remove('feature-marker-selected')
-        }*/
-        Object.values(featureMarkers.value).map((marker) => {
+        // every marker: another tab may have unselected a feature without removing its class
+        for (const marker of Object.values(featureMarkers.value)) {
             marker.getElement().classList.remove('feature-marker-selected')
-        })
+        }
+        if (selectedFeatureRef.current === null) return // nothing selected: no state update
+        selectedFeatureRef.current = null // up to date before the next render (e.g. selectFeature right after)
         selectedFeature.setValue(null)
     }
 
@@ -575,7 +596,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             { mapLoaded && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
                     <button className='maplibregl-ctrl-compass'
-                        onClick={() => { setAutoBearing(!autoBearing) }}
+                        onClick={switchAutoBearing}
                         title={t(autoBearing ? 'map.autoBearing.on' : 'map.autoBearing.off')}
                         aria-pressed={autoBearing}
                         style={{color: autoBearing ? 'blue' : 'grey'}}>
