@@ -7,7 +7,8 @@ import {
 } from "./contexts";
 import { OverpassFeature, UploadTabParams } from "./types";
 import { buildChangesetComment, CommentedEdit } from "./changesetComment";
-import { getNatural } from "./utils";
+import { getNatural, getNaturalLabel } from "./utils";
+import { Lang, lang, languages, setLanguage, t } from "./i18n";
 
 const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   const osmConnection = useContext(OSMConnectionContext);
@@ -61,12 +62,14 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   const onSend = async () => {
     resetLogs();
     appendLog(
-      `Envoi de ${Object.keys(osmConnection.value.editedFeatures).length} élément(s) vers OpenStreetMap`,
+      t("upload.log.start", {
+        n: Object.keys(osmConnection.value.editedFeatures).length,
+      }),
     );
     const osmRequest = osmConnection.value.osmRequest;
 
     const changesetId = await osmRequest.createChangeset("osmtree", comment);
-    appendLog(`Groupe de modification créé : changeset=${changesetId}`);
+    appendLog(t("upload.log.changeset", { id: changesetId }));
 
     const uploadedFeatures: OverpassFeature[] = [];
     const idsToDelete: number[] = [];
@@ -74,7 +77,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
     for (const feature of Object.values(osmConnection.value.editedFeatures)) {
       if (feature.feature.id) {
         const oldId = feature.feature.id;
-        appendLog(`Elément ${oldId}`);
+        appendLog(t("upload.log.element", { id: oldId }));
         const isNew = oldId < 0;
         let newId = oldId;
         const newPosition = feature.editingProperties.getNewPosition(); // LngLat or undefined
@@ -91,7 +94,10 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           const relations = await osmRequest.fetchRelationsForElement(osmId);
           if (ways.length > 0 || relations.length > 0) {
             appendLog(
-              `Suppression impossible : l'élément est utilisé par ${ways.length} chemin(s) et ${relations.length} relation(s), ignoré`,
+              t("upload.log.deleteImpossible", {
+                ways: ways.length,
+                relations: relations.length,
+              }),
             );
             // redraw it as a regular feature
             idsToDelete.push(oldId);
@@ -102,7 +108,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
             continue;
           }
           const element = await osmRequest.fetchElement(osmId);
-          appendLog("Suppression de l'élément");
+          appendLog(t("upload.log.deleteElement"));
           await osmRequest.deleteElement(element, changesetId);
           idsToDelete.push(oldId); // removed from the map, not recreated
           continue;
@@ -110,7 +116,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
 
         if (isNew) {
           if (coordsLatLng === undefined) {
-            appendLog(`Annulation, coordonnées nulles`);
+            appendLog(t("upload.log.noCoordinates"));
             continue;
           } else {
             const element = await osmRequest.createNodeElement(
@@ -119,7 +125,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
               tags,
             );
             newId = Number(await osmRequest.sendElement(element, changesetId));
-            appendLog(`Nouvel identifiant ${newId}`);
+            appendLog(t("upload.log.newId", { id: newId }));
           }
         } else {
           let element = await osmRequest.fetchElement(`node/${oldId}`); // id au format node/123456789
@@ -133,13 +139,13 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           // tags to delete
           for (const prop of feature.editingProperties.getProps()) {
             if (prop.status === "deleted") {
-              appendLog(`Suppression du tag ${prop.key}`);
+              appendLog(t("upload.log.deleteTag", { key: prop.key }));
               element = osmRequest.removeTag(element, prop.key);
             }
           }
-          appendLog("Mise à jour des autres tags");
+          appendLog(t("upload.log.updateTags"));
           element = osmRequest.setTags(element, tags);
-          appendLog("Envoi de l'élément");
+          appendLog(t("upload.log.sendElement"));
           await osmRequest.sendElement(element, changesetId);
         }
 
@@ -159,7 +165,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
         });
       }
     }
-    appendLog("Fermeture du groupe de modification");
+    appendLog(t("upload.log.close"));
     await osmRequest.closeChangeset(changesetId);
     setLastChangesetId(Number(changesetId));
     setCustomComment(null); // next changeset: automatic comment again
@@ -185,7 +191,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
     const editedFeatures = Object.values(osmConnection.value.editedFeatures);
     if (
       !window.confirm(
-        `Annuler les modifications de ${editedFeatures.length} élément(s) ?`,
+        t("upload.confirmCancelAll", { n: editedFeatures.length }),
       )
     )
       return;
@@ -203,7 +209,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
         .map(({ feature }) => feature), // original tags and position
       idsToDelete: editedFeatures.map(({ feature }) => feature.id),
     });
-    setLogs([`Modifications de ${editedFeatures.length} élément(s) annulées`]);
+    setLogs([t("upload.cancelledAll", { n: editedFeatures.length })]);
   };
 
   const onEditedFeatureClick = (id: number) => {
@@ -213,31 +219,41 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   return (
     <div className="upload_tab">
       <br />
+      <label className="language">
+        {t("upload.language")}{" "}
+        <select
+          value={lang}
+          onChange={(event) => setLanguage(event.target.value as Lang)}
+        >
+          {Object.entries(languages).map(([code, name]) => (
+            <option key={code} value={code}>
+              {name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <br />
       {osmConnection.value.auth.authenticated() ? (
         <span>
-          Connecté à{" "}
+          {t("upload.connected")}{" "}
           <a href="https://www.openstreetmap.org" target="_blank">
             OpenStreetMap
           </a>
         </span>
       ) : (
         <span>
-          La connexion à un compte{" "}
-          <a href="https://www.openstreetmap.org" target="_blank">
-            OpenStreetMap
-          </a>{" "}
-          est requise pour éditer les données.
+          {t("upload.loginRequired", { osm: "OpenStreetMap" })}
         </span>
       )}
       <br />
       {!osmConnection.value.auth.authenticated() && (
         <div>
-          <button onClick={osmLogin}>Se connecter à OpenStreetMap</button>
+          <button onClick={osmLogin}>{t("upload.login")}</button>
         </div>
       )}
       {osmConnection.value.auth.authenticated() && (
         <div>
-          Bienvenue{" "}
+          {t("upload.welcome")}{" "}
           <a
             href={
               "https://www.openstreetmap.org/user/" +
@@ -248,12 +264,12 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
             {osmConnection.value.userName}
           </a>
           <br />
-          <button onClick={osmLogout}>Se déconnecter</button>
+          <button onClick={osmLogout}>{t("upload.logout")}</button>
           <br />
           <br />
-          Eléments prêts à être envoyés :
+          {t("upload.ready")}
           {Object.keys(osmConnection.value.editedFeatures).length === 0 && (
-            <div>Aucun</div>
+            <div>{t("upload.none")}</div>
           )}
           {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
             <ul>
@@ -265,12 +281,12 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
                       onClick={() => onEditedFeatureClick(feature.feature.id)}
                     >
                       <a>
-                        {getNatural(feature)}{" "}
+                        {getNaturalLabel(getNatural(feature))}{" "}
                         {feature.feature.id < 0
-                          ? `(nouveau ${-feature.feature.id})`
+                          ? `(${t("upload.newFeature", { n: -feature.feature.id })})`
                           : feature.feature.id}
                         {feature.editingProperties.isDeleted() &&
-                          " (suppression)"}
+                          t("upload.deletion")}
                       </a>
                     </li>
                   );
@@ -281,7 +297,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
             <div>
               <button className="cancel-all" onClick={onCancelAll}>
-                Tout annuler
+                {t("upload.cancelAll")}
               </button>
             </div>
           )}
@@ -291,7 +307,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
             className="comment"
             onChange={commentChanged}
             value={comment}
-            placeholder="commentaire du groupe de modification"
+            placeholder={t("upload.commentPlaceholder")}
           />
           <button
             disabled={
@@ -300,7 +316,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
             }
             onClick={onSend}
           >
-            Envoyer à OpenStreetMap
+            {t("upload.send")}
           </button>
           <div ref={logContainerRef} className="logs">
             {logs.map((log, index) => (
@@ -309,7 +325,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           </div>
           {lastChangesetId > 0 && (
             <div>
-              Dernier groupe de modification envoyé :{" "}
+              {t("upload.lastChangeset")}{" "}
               <a
                 href={`https://www.openstreetmap.org/changeset/${lastChangesetId}`}
                 target="blank"

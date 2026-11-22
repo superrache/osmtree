@@ -2,6 +2,7 @@ import { CandidateChoiceParams, PlantNetCandidate } from './types'
 import './CandidateChoice.css'
 import { rgbaToHex } from './utils'
 import { getWikidataFromGbif } from './wikidata'
+import { t } from './i18n'
 
 const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, handleSelectCandidate}: CandidateChoiceParams) => {  
     if (candidates.length === 0) {
@@ -44,7 +45,7 @@ const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, handle
                         <div>{ `genus=${candidate.genus}` }</div>
                         <div>{ `species=${candidate.species}` }</div>
                         <div className='score'>
-                            { `fiabilité: ${(Math.round(candidate.score * 1000) / 10)}%` }
+                            { t('identify.score', { score: (Math.round(candidate.score * 1000) / 10).toLocaleString(document.documentElement.lang) }) }
                         </div>
                     </div>
                 </div>

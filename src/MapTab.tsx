@@ -46,6 +46,7 @@ import './MapTab.css'
 import { getBounds, getNatural, getNaturalLabel, getSpeciesName, getTagsCompleteness } from './utils'
 import { EditableFeature, MapTabParams, OverpassFeature } from './types'
 import { naturalTypes, notDuplicatedKeys, osmConfig } from './consts'
+import { t } from './i18n'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
@@ -92,23 +93,21 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
     //const treeImgs = [tree1Img, tree2Img, tree3Img, tree4Img, tree5Img, tree6Img, tree7Img, tree8Img, tree9Img, tree10Img, tree11Img, tree12Img, tree13Img, tree14Img, tree15Img, tree16Img, tree17Img, tree18Img, tree19Img, tree20Img, tree21Img, tree22Img, tree23Img, tree24Img, tree25Img, tree26Img, tree27Img, tree28Img, tree29Img, tree30Img, tree31Img]
 
-    // French tooltips and labels of the MapLibre controls (default: English)
+    // tooltips and labels of the MapLibre controls in the user's language
     const mapLocale: Record<string, string> = {
-        'AttributionControl.ToggleAttribution': 'Afficher ou masquer les crédits',
-        'AttributionControl.MapFeedback': 'Signaler une erreur sur la carte',
-        'FullscreenControl.Enter': 'Plein écran',
-        'FullscreenControl.Exit': 'Quitter le plein écran',
-        'GeolocateControl.FindMyLocation': 'Me localiser',
-        'GeolocateControl.LocationNotAvailable': 'Position indisponible',
-        'LogoControl.Title': 'Logo MapLibre',
-        'Map.Title': 'Carte',
-        'Marker.Title': 'Marqueur',
-        'NavigationControl.ResetBearing': 'Réorienter la carte vers le nord',
-        'NavigationControl.ZoomIn': 'Zoomer',
-        'NavigationControl.ZoomOut': 'Dézoomer',
-        'Popup.Close': 'Fermer',
-        'ScaleControl.Meters': 'm',
-        'ScaleControl.Kilometers': 'km'
+        'AttributionControl.ToggleAttribution': t('maplibre.toggleAttribution'),
+        'AttributionControl.MapFeedback': t('maplibre.mapFeedback'),
+        'FullscreenControl.Enter': t('maplibre.fullscreenEnter'),
+        'FullscreenControl.Exit': t('maplibre.fullscreenExit'),
+        'GeolocateControl.FindMyLocation': t('maplibre.findMyLocation'),
+        'GeolocateControl.LocationNotAvailable': t('maplibre.locationNotAvailable'),
+        'LogoControl.Title': t('maplibre.logo'),
+        'Map.Title': t('maplibre.map'),
+        'Marker.Title': t('maplibre.marker'),
+        'NavigationControl.ResetBearing': t('maplibre.resetBearing'),
+        'NavigationControl.ZoomIn': t('maplibre.zoomIn'),
+        'NavigationControl.ZoomOut': t('maplibre.zoomOut'),
+        'Popup.Close': t('maplibre.close')
     }
 
     const orthoStyle: StyleSpecification = {
@@ -512,7 +511,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             // the trees come from OSM whatever the background: credit it with every style
             // (customAttribution doesn't depend on the style's sources: it survives setStyle)
             map.current.addControl(new AttributionControl({
-                customAttribution: "<a href='https://www.openstreetmap.org/copyright' target='_blank'>&copy; les contributeurs d'OpenStreetMap</a>"
+                customAttribution: `<a href='https://www.openstreetmap.org/copyright' target='_blank'>${t('map.osmCredit')}</a>`
             }))
 
             map.current.addControl(
@@ -568,7 +567,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                         <div className='feature_id'>
                             {id > 0
                                 ? <a href={`${osmConfig.url}/node/${id}`} target='_blank' rel='noreferrer'>node/{id}</a>
-                                : `nouvel élément (id temporaire ${id})`}
+                                : t('map.newFeature', { id })}
                         </div>
                     </div>
                 </div>
@@ -577,7 +576,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
                     <button className='maplibregl-ctrl-compass'
                         onClick={() => { setAutoBearing(!autoBearing) }}
-                        title={`Orientation automatique de la carte selon la boussole : ${autoBearing ? 'activée' : 'désactivée'}`}
+                        title={t(autoBearing ? 'map.autoBearing.on' : 'map.autoBearing.off')}
                         aria-pressed={autoBearing}
                         style={{color: autoBearing ? 'blue' : 'grey'}}>
                         B
@@ -588,30 +587,31 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-map-style'>
                     <button className='maplibregl-ctrl-compass'
                         onClick={switchMapStyle}
+                        title={t('map.switchStyle')}
                         style={{border: mapStyle ? '2px solid #ff9454' : 'none'}}>
                         <img src={layersImg} alt='' />
                     </button>
                 </div>
             }
-            { loading && <div className='loading'>Chargement…</div> }
+            { loading && <div className='loading'>{t('map.loading')}</div> }
             { !loading && loadError && <div className='loading load-error'>
-                Données indisponibles <button onClick={loadVisibleData}>Réessayer</button>
+                {t('map.loadError')} <button onClick={loadVisibleData}>{t('map.retry')}</button>
             </div> }
             { !creatingPosition && <div className="creating-position-buttons">
-                <button className="creating-position-button" onClick={onAddButtonClick} title='Ajouter un élément'>
+                <button className="creating-position-button" onClick={onAddButtonClick} title={t('map.add')}>
                     <img src={crossImg} width='50' />
                 </button>
                 <button className="creating-position-button duplicate-button" onClick={onDuplicateButtonClick}
                     disabled={selectedFeature.value === null}
-                    title="Dupliquer l'élément sélectionné">
+                    title={t('map.duplicate')}>
                     <img src={copyImg} alt='' />
                 </button>
             </div> }
             { creatingPosition && <div className="creating-position-buttons">
-                <button className="creating-position-button" onClick={onCreatePositionConfirm}>
+                <button className="creating-position-button" onClick={onCreatePositionConfirm} title={t('map.confirmPosition')}>
                     <img src={confirmImg} width='50' />
                 </button>
-                <button className="creating-position-button" onClick={onCreatePositionCancel}>
+                <button className="creating-position-button" onClick={onCreatePositionCancel} title={t('map.cancelPosition')}>
                     <img src={cancelImg} width='50' />
                 </button>
             </div>}

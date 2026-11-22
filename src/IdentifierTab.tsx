@@ -7,14 +7,15 @@ import { getApiUrl, getNatural, getNaturalLabel, getSpeciesName } from './utils'
 import { SelectedFeatureContext } from './contexts'
 import { combinations, naturalTypes } from './consts'
 import { EditingProperties } from './EditingProperties'
+import { lang, localizedSpeciesKey, t } from './i18n'
 
 const IdentifierTab = () => {
     const maxResults = 12
 
     const selectedFeature = useContext(SelectedFeatureContext)
 
-    const [localizedSpeciesKey, setLocalizedSpeciesKey] = useState<string>('species:en')
     const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [identifyError, setIdentifyError] = useState<boolean>(false)
     const [candidates, setCandidates] = useState<PlantNetCandidate[]>([])
     // type and combinations chosen without selection (applied to a feature created by an identification)
     const [lastNaturalType, setLastNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
@@ -76,12 +77,10 @@ const IdentifierTab = () => {
 
     const handleIdentify = async (params: PlantNetIdentifyParams) => {
         setIsLoading(true)
+        setIdentifyError(false)
         setCandidates([])
         try {
-            // save current language to save result in the good osm key
-            const lang = 'fr' // TODO: get user lang
-            setLocalizedSpeciesKey(`species:${lang}`)
-
+            // common names in the user's language, written to species:<lang>
             const form = new FormData()
             form.append('organs', params.organ) // only one, TODO: could be several
             form.append('image', params.pictureFile)
@@ -92,6 +91,8 @@ const IdentifierTab = () => {
                 body: form
             })
             const data = await response.json()
+            // the Worker answers {error: 20|21|22} with HTTP 200
+            if (!response.ok || !Array.isArray(data?.results)) throw new Error(`identification failed: ${JSON.stringify(data)}`)
 
             const tmpCandidates: PlantNetCandidate[] = []
             for(const res of data.results) {
@@ -126,6 +127,7 @@ const IdentifierTab = () => {
             setCandidates(tmpCandidates)
         } catch (error) {
             console.error('Identify error', error)
+            setIdentifyError(true)
         } finally {
             setIsLoading(false)
         }
@@ -193,7 +195,7 @@ const IdentifierTab = () => {
                 <span>{naturalType}</span>
             </div>}
             <div className="identifier_group">
-                Type principal
+                {t('identify.naturalType')}
                 <div className="things">
                     {Object.entries(naturalTypes).map(([tag, nt]) => {
                         return (
@@ -228,10 +230,11 @@ const IdentifierTab = () => {
             })}
 
             <div className="identifier_group">
-                Identification Pl@ntNet
+                {t('identify.plantnet')}
                 <PlantNetIdentifyForm onIdentify={handleIdentify} isLoading={isLoading}/>
 
-                { isLoading && <div>Identification en cours...</div>}
+                { isLoading && <div>{t('identify.inProgress')}</div>}
+                { identifyError && <div>{t('identify.error')}</div>}
 
                 <CandidateChoice
                     candidates={candidates}

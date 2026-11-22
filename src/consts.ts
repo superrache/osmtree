@@ -17,22 +17,23 @@ import flowerImg from './assets/flower.svg'
 import fruitImg from './assets/fruit.svg'
 import barkImg from './assets/bark.svg'
 import { Combination, ExpectedTag, NaturalType, Organ } from './types'
+import { t } from './i18n'
 
 export const naturalTypes: Record<string, NaturalType> = {
     'tree': {
         icon: naturalTreeIcon,
         color: '#7cb26f',
-        label: 'Arbre'
+        label: t('natural.tree')
     },
     'shrub': {
         icon: naturalShrubIcon,
         color: '#2e856f',
-        label: 'Arbuste'
+        label: t('natural.shrub')
     },
     'plant': {
         icon: naturalPlantIcon,
         color: '#7ce448',
-        label: 'Herbacée'
+        label: t('natural.plant')
     }
 }
 
@@ -43,7 +44,7 @@ export const expectedTags: ExpectedTag[] = [
     { label: 'leaf_type', key: 'leaf_type', pattern: /^leaf_type$/ },
     { label: 'leaf_cycle', key: 'leaf_cycle', pattern: /^leaf_cycle$/ },
     { label: 'species:wikidata', key: 'species:wikidata', pattern: /^species:wikidata$/ },
-    { label: 'species ou species:xx', key: 'species', pattern: /^species(:[a-z]{2,3}([-_][A-Za-z]+)?)?$/ }, // any language
+    { label: t('expectedTag.species'), key: 'species', pattern: /^species(:[a-z]{2,3}([-_][A-Za-z]+)?)?$/ }, // any language
     { label: 'genus', key: 'genus', pattern: /^genus$/ }
 ]
 
@@ -63,82 +64,82 @@ export const notDuplicatedKeys = [
 
 export const combinations: Record<string, Combination> = {
     'denotation': {
-        label: 'Dénotation',
+        label: t('combination.denotation'),
         key: 'denotation',
         natural: ['tree'],
         values: {
             'none': {
                 icon: noneImg,
-                label: 'Aucun'
+                label: t('combination.denotation.none')
             },
             'landmark': {
                 icon: landmarkIcon,
-                label: 'Repère géographique'
+                label: t('combination.denotation.landmark')
             },
             'natural_monument': {
                 icon: naturalMonumentIcon,
-                label: 'Monument naturel'
+                label: t('combination.denotation.natural_monument')
             },
             'urban': {
                 icon: urbanIcon,
-                label: 'Urbain'
+                label: t('combination.denotation.urban')
             },
             'park': {
                 icon: parkIcon,
-                label: 'Parc'
+                label: t('combination.denotation.park')
             },
             'garden': {
                 icon: gardenIcon,
-                label: 'Jardin'
+                label: t('combination.denotation.garden')
             },
             'agricultural': {
                 icon: agriculturalIcon,
-                label: 'Agricole'
+                label: t('combination.denotation.agricultural')
             }
         }
     },
     'leaf_type': {
-        label: 'Type de feuille',
+        label: t('combination.leaf_type'),
         key: 'leaf_type',
         natural: ['tree', 'shrub'],
         values: {
             'none': {
-                label: 'Non renseigné',
+                label: t('combination.leaf_type.none'),
                 icon: noneImg
             },
             'broadleaved': {
-                label: 'Feuilles',
+                label: t('combination.leaf_type.broadleaved'),
                 icon: leafImg
             },
             'needleleaved': {
-                label: 'Aiguilles',
+                label: t('combination.leaf_type.needleleaved'),
                 icon: needleIcon
             },
             'leafless': {
-                label: 'Sans feuille',
+                label: t('combination.leaf_type.leafless'),
                 icon: cactusIcon
             }
         }
     },
     'leaf_cycle': {
-        label: 'Phénologie',
+        label: t('combination.leaf_cycle'),
         key: 'leaf_cycle',
         natural: ['tree', 'shrub', 'plant'],
         values: {
             'none': {
-                label: 'Non renseigné',
+                label: t('combination.leaf_cycle.none'),
                 icon: noneImg
             },
             'deciduous': {
-                label: 'Caduque',
+                label: t('combination.leaf_cycle.deciduous'),
                 icon: deciduousIcon
             },
             'evergreen': {
-                label: 'Persistant',
+                label: t('combination.leaf_cycle.evergreen'),
                 icon: evergreenIcon
             },
             'semi_evergreen': {
-                label: 'Semi-persistant',
+                label: t('combination.leaf_cycle.semi_evergreen'),
                 icon: agriculturalIcon
             }
         }
@@ -146,10 +147,10 @@ export const combinations: Record<string, Combination> = {
 }
 
 export const organs: Record<string, Organ> = {
-    'leaf': {icon: leafImg, label: 'Feuille'},
-    'flower': {icon: flowerImg, label: 'Fleur'},
-    'fruit': {icon: fruitImg, label: 'Fruit'},
-    'bark': {icon: barkImg, label: 'Écorce'}
+    'leaf': {icon: leafImg, label: t('organ.leaf')},
+    'flower': {icon: flowerImg, label: t('organ.flower')},
+    'fruit': {icon: fruitImg, label: t('organ.fruit')},
+    'bark': {icon: barkImg, label: t('organ.bark')}
 }
 
 const devOsmConfig = {
