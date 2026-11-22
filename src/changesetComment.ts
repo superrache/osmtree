@@ -10,7 +10,7 @@ export type CommentedEdit = {
 
 const actionVerbs: Record<Action, string> = { add: 'Add', update: 'update', delete: 'delete' }
 
-// English nouns of the natural types (the UI labels are in French)
+// English nouns of the natural types (the comment stays in English whatever the UI language)
 const naturalNouns: Record<string, [string, string]> = {
     tree: ['tree', 'trees'],
     shrub: ['shrub', 'shrubs'],

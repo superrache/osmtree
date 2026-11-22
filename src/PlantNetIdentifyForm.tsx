@@ -4,6 +4,7 @@ import poweredByPlantNetImg from './assets/powered-by-plantnet-dark.svg'
 import './PlantNetIdentifyForm.css'
 import { PlantNetIdentifyFormProps, PlantNetIdentifyParams } from './types'
 import { organs } from './consts'
+import { t } from './i18n'
 
 const PlantNetIdentifyForm = ({onIdentify, isLoading}: PlantNetIdentifyFormProps) => {
     const [organ, setOrgan] = useState<string>(Object.keys(organs)[0])
@@ -66,12 +67,12 @@ const PlantNetIdentifyForm = ({onIdentify, isLoading}: PlantNetIdentifyFormProps
             </div>
 
             <div id="buttons">
-                <button onClick={handleIdentify} disabled={!hasPreview() || isLoading}>Identifier avec Pl@ntNet</button>
+                <button onClick={handleIdentify} disabled={!hasPreview() || isLoading}>{t('identify.button')}</button>
             </div>
             <div className='plantnet_mention'>
                 <a href="https://plantnet.org/" target="blank"><img src={poweredByPlantNetImg} width='200' /></a>
                 <br/>
-                <span>Le service utilisé pour l'identification par image des espèces végétales est basé sur l'API de reconnaissance Pl@ntNet, régulièrement mise à jour</span>
+                <span>{t('identify.plantnetMention')}</span>
             </div>
         </>
     )

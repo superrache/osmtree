@@ -10,23 +10,11 @@ import AutocompleteInput from "./AutocompleteInput";
 import { AttributesTabParams, EditableFeature } from "./types";
 import { EditingProperties } from "./EditingProperties";
 import { getMissingExpectedTags } from "./utils";
+import { notDuplicatedKeys } from "./consts";
+import { t } from "./i18n";
 
 // FIXME: bug: create an existing key with the last line
 // FIXME: bug: delete a key then recreate it with the last line
-
-// specific to one feature: never copied to another one
-const notDuplicatedKeys = [
-  "name",
-  "ref",
-  "note",
-  "fixme",
-  "description",
-  "image",
-  "wikidata",
-  "wikipedia",
-  "survey:date",
-  "check_date",
-];
 
 const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
   const selectedFeature = useContext(SelectedFeatureContext);
@@ -136,11 +124,14 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
   const getCancelableCount = (): number => {
     if (selectedFeature.value === null) return 0;
     const { feature, editingProperties } = selectedFeature.value;
-    const keptPosition =
-      feature.id < 0 && editingProperties.getNewPosition() !== undefined
-        ? 1
-        : 0;
-    return editingProperties.getChangedCount() - keptPosition;
+    if (feature.id < 0) {
+      // its tags are all 'new': compare with its initial tags
+      const initial = new EditingProperties(feature).getTagsToSend();
+      const current = editingProperties.getTagsToSend();
+      const keys = new Set([...Object.keys(initial), ...Object.keys(current)]);
+      return [...keys].filter((key) => initial[key] !== current[key]).length;
+    }
+    return editingProperties.getChangedCount();
   };
 
   const onCancel = () => {
@@ -181,8 +172,8 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
     const { feature, editingProperties } = selectedFeature.value;
     const isNew = feature.id < 0;
     const question = isNew
-      ? "Supprimer ce nouvel élément ?"
-      : "Supprimer cet élément d'OpenStreetMap ?\nLa suppression sera envoyée avec le prochain groupe de modification.";
+      ? t("attributes.confirmDeleteNew")
+      : t("attributes.confirmDelete");
     if (!window.confirm(question)) return;
 
     const markerElement = featureMarkers.value[feature.id]?.getElement();
@@ -252,16 +243,16 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
 
   return (
     <div className="attributes_tab">
-      <h2>Attributs</h2>
+      <h2>{t("attributes.title")}</h2>
       {!osmConnection.value.auth.authenticated() &&
         selectedFeature.value !== null && (
           <div>
             <table>
               <thead>
                 <tr>
-                  <th>Clé</th>
+                  <th>{t("attributes.key")}</th>
                   <th>=</th>
-                  <th>Valeur</th>
+                  <th>{t("attributes.value")}</th>
                 </tr>
               </thead>
               {Object.entries(selectedFeature.value.feature.properties).map(
@@ -276,18 +267,18 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
                 ),
               )}
             </table>
-            <span>Connecte-toi à OpenStreetMap pour éditer les attributs</span>
+            <span>{t("attributes.loginToEdit")}</span>
           </div>
         )}
       {osmConnection.value.auth.authenticated() &&
         selectedFeature.value !== null &&
         selectedFeature.value.editingProperties.isDeleted() && (
           <div>
-            <p>
-              Cet élément sera supprimé d'OpenStreetMap lors du prochain envoi.
-            </p>
+            <p>{t("attributes.willBeDeleted")}</p>
             <div className="buttons">
-              <button onClick={onRestoreFeature}>Annuler la suppression</button>
+              <button onClick={onRestoreFeature}>
+                {t("attributes.restore")}
+              </button>
             </div>
           </div>
         )}
@@ -298,9 +289,9 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
             <table>
               <thead>
                 <tr>
-                  <th>Clé</th>
+                  <th>{t("attributes.key")}</th>
                   <th>=</th>
-                  <th>Valeur</th>
+                  <th>{t("attributes.value")}</th>
                 </tr>
               </thead>
               {selectedFeature.value &&
@@ -339,7 +330,7 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
               selectedFeature.value.editingProperties.getTagsToSend(),
             ).length > 0 && (
               <p className="missing-tags">
-                Tags à compléter :{" "}
+                {t("attributes.missingTags")}{" "}
                 {getMissingExpectedTags(
                   selectedFeature.value.editingProperties.getTagsToSend(),
                 ).map((expectedTag, index) => (
@@ -358,15 +349,18 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
             {selectedFeature.value.feature.geometry.type === "Point" &&
               selectedFeature.value.feature.geometry.coordinates[0] === 0 && (
                 <div>
-                  Cet élément n'a pas de position géographique : il sera
-                  enregistré une fois positionné.{" "}
-                  <button onClick={onLocateFeature}>Positionner</button>
+                  {t("attributes.noPosition")}{" "}
+                  <button onClick={onLocateFeature}>
+                    {t("attributes.locate")}
+                  </button>
                 </div>
               )}
             {selectedFeature.value.feature.geometry.type === "Point" &&
               selectedFeature.value.feature.geometry.coordinates[0] !== 0 && (
                 <div>
-                  <button onClick={onLocateFeature}>Déplacer l'élément</button>
+                  <button onClick={onLocateFeature}>
+                    {t("attributes.move")}
+                  </button>
                 </div>
               )}
             <div>
@@ -374,16 +368,16 @@ const AttributesTab = ({ onLocateFeature }: AttributesTabParams) => {
                 onClick={onDuplicatePrevious}
                 disabled={Object.keys(getTagsToDuplicate()).length === 0}
               >
-                Dupliquer les attributs de l'élément précédent
+                {t("attributes.duplicatePrevious")}
               </button>
             </div>
             <div className="buttons">
-              <button onClick={onDone}>Terminer</button>
+              <button onClick={onDone}>{t("attributes.done")}</button>
               <button onClick={onCancel} disabled={getCancelableCount() === 0}>
-                Annuler
+                {t("attributes.cancel")}
               </button>
               <button className="delete-feature" onClick={onDeleteFeature}>
-                Supprimer
+                {t("attributes.delete")}
               </button>
             </div>
           </div>

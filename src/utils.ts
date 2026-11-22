@@ -1,6 +1,7 @@
 import { Map } from "maplibre-gl"
 import { EditableFeature, ExpectedTag } from "./types"
 import { expectedTags, naturalTypes } from "./consts"
+import { localizedSpeciesKey, t } from "./i18n"
 
 // API (Cloudflare Pages Functions) is always served on the same origin as the client
 // (in dev, Vite proxies /api to `wrangler pages dev`)
@@ -36,9 +37,9 @@ export const getNaturalLabel = (natural: string | undefined): string => {
     return naturalTypes[natural]?.label ?? natural
 }
 
-// species name to display: French name, else scientific name
+// species name to display: name in the user's language, else scientific name
 export const getSpeciesName = (properties: Record<string, string>): string => {
-    return properties['species:fr'] ?? properties['species'] ?? 'inconnu'
+    return properties[localizedSpeciesKey] ?? properties['species'] ?? t('species.unknown')
 }
 
 // a feature goes to the upload queue as soon as it has changes (like iD: no validation step);

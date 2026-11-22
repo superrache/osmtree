@@ -60,14 +60,14 @@ const getWikidataFromScientificName = async (name: string): Promise<string | und
     return typeof title === 'string' && /^Q\d+$/.test(title) ? title : undefined
 }
 
-// Wikidata item of a species from its French name (exact label or alias), if there is exactly one
-// (e.g. 'platane' is the genus Platanus: no species found)
-const getWikidataFromFrenchName = async (name: string): Promise<string | undefined> => {
-    const normalized = (text: string) => text.normalize('NFC').trim().toLocaleLowerCase('fr')
+// Wikidata item of a species from its common name in a language (exact label or alias), if there is
+// exactly one (e.g. French 'platane' is the genus Platanus: no species found)
+const getWikidataFromCommonName = async (name: string, language: string): Promise<string | undefined> => {
+    const normalized = (text: string) => text.normalize('NFC').trim().toLocaleLowerCase(language)
     const search = await callWikidataApi({
         action: 'wbsearchentities',
         search: name,
-        language: 'fr',
+        language: language,
         strictlanguage: '1',
         type: 'item',
         limit: '10'
@@ -91,14 +91,14 @@ const getWikidataFromFrenchName = async (name: string): Promise<string | undefin
 // lookups already made (or in progress), by name
 const speciesWikidataCache = new Map<string, Promise<string | undefined>>()
 
-// Wikidata item of a species, from its scientific name or else its French name
-export const getSpeciesWikidata = (species: string | undefined, speciesFr: string | undefined): Promise<string | undefined> => {
-    const cacheKey = `${species ?? ''}|${speciesFr ?? ''}`
+// Wikidata item of a species, from its scientific name or else its common name in a language
+export const getSpeciesWikidata = (species: string | undefined, commonName: string | undefined, language: string): Promise<string | undefined> => {
+    const cacheKey = `${species ?? ''}|${language}:${commonName ?? ''}`
     let lookup = speciesWikidataCache.get(cacheKey)
     if (lookup === undefined) {
         lookup = (async () => {
             if (species) return await getWikidataFromScientificName(species.trim())
-            if (speciesFr) return await getWikidataFromFrenchName(speciesFr)
+            if (commonName) return await getWikidataFromCommonName(commonName, language)
             return undefined
         })()
         speciesWikidataCache.set(cacheKey, lookup)

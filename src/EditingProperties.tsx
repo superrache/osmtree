@@ -20,11 +20,13 @@ export class EditingProperties {
 
     constructor(feature: OverpassFeature) {
         this.props = []
+        // a new feature (negative id) isn't in OSM yet: all its tags are new
+        const status = feature.id < 0 ? 'new' : 'unmodified'
         for (const [key, value] of Object.entries(feature.properties)) {
             this.props.push({
                 key: key,
                 tag: value,
-                status: 'unmodified'
+                status: status
             })
         }
         this.props.push({key: '', tag: '', status: 'new'})

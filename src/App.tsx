@@ -19,6 +19,7 @@ import WikiTab from "./WikiTab"
 import { FeatureMarker } from "./FeatureMarker"
 import { loadEditedFeatures, saveEditedFeatures } from "./editedFeaturesStorage"
 import { getSpeciesWikidata } from "./wikidata"
+import { lang, localizedSpeciesKey, t } from "./i18n"
 import { isToUpload } from "./utils"
 
 // single instances for the whole app (osm-request uses osm-auth once connected)
@@ -72,7 +73,7 @@ const App = () => {
         saveEditedFeatures(osmConnection.editedFeatures)
     }, [osmConnection.editedFeatures])
 
-    // a selected feature with species or species:fr but no species:wikidata gets it automatically
+    // a selected feature with species or species:<lang> but no species:wikidata gets it automatically
     // (like any change, it goes to the upload queue; Annuler reverts it)
     const selectedId = selectedFeature?.feature.id
     useEffect(() => {
@@ -82,15 +83,15 @@ const App = () => {
         // a deleted species:wikidata (still in the list) was removed on purpose: don't add it back
         if (selection.editingProperties.getProps().some((prop) => prop.key === 'species:wikidata')) return
         const species = tags['species']
-        const speciesFr = tags['species:fr']
-        if (species === undefined && speciesFr === undefined) return
+        const commonName = tags[localizedSpeciesKey]
+        if (species === undefined && commonName === undefined) return
         let cancelled = false
-        getSpeciesWikidata(species, speciesFr).then((wikidata) => {
+        getSpeciesWikidata(species, commonName, lang).then((wikidata) => {
             const current = selectedFeatureRef.current
             if (cancelled || wikidata === undefined || current === null || current.feature.id !== selection.feature.id) return
             // the tags may have changed during the lookup
             const currentTags = current.editingProperties.getTagsToSend()
-            if (currentTags['species'] !== species || currentTags['species:fr'] !== speciesFr
+            if (currentTags['species'] !== species || currentTags[localizedSpeciesKey] !== commonName
                 || current.editingProperties.getProps().some((prop) => prop.key === 'species:wikidata')) return
             console.log(`species:wikidata=${wikidata} added to ${current.feature.id}`)
             current.editingProperties.modifyValue('species:wikidata', wikidata)
@@ -174,11 +175,11 @@ const App = () => {
     }
 
     const tabs: Tab[] = [
-        { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef} focusFeatureRef={focusFeatureRef}></MapTab> },
-        { icon: attributesImg, label: 'Attributs', notificationCount: changedAttributesCount, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
-        { icon: identifyImg, label: 'Assistant', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
-        { icon: imageImg, label: 'Wiki', notificationCount: 0, content: <WikiTab></WikiTab> },
-        { icon: uploadImg, label: 'Envoi OSM', notificationCount: readyToSendFeatureCount, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout} onShowFeature={handleShowFeature}></UploadTab> }
+        { icon: mapImg, label: t('tab.map'), notificationCount: 0, content: <MapTab mapTabRef={mapTabRef} focusFeatureRef={focusFeatureRef}></MapTab> },
+        { icon: attributesImg, label: t('tab.attributes'), notificationCount: changedAttributesCount, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
+        { icon: identifyImg, label: t('tab.identify'), notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
+        { icon: imageImg, label: t('tab.wiki'), notificationCount: 0, content: <WikiTab></WikiTab> },
+        { icon: uploadImg, label: t('tab.upload'), notificationCount: readyToSendFeatureCount, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout} onShowFeature={handleShowFeature}></UploadTab> }
     ]
 
     // landing from osm authentication page: handled once per page load, in an effect
