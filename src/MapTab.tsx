@@ -36,15 +36,15 @@ import tree29Img from './assets/collection/29.svg'
 import tree30Img from './assets/collection/30.svg'
 import tree31Img from './assets/collection/31.svg'*/
 import type { Point } from 'geojson'
-import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, setWorkerUrl } from 'maplibre-gl'
+import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateControl, AttributionControl, setWorkerUrl } from 'maplibre-gl'
 // maplibre-gl 6 resolves its worker relative to import.meta.url, which breaks once Vite bundles it
 // (dev: .vite/deps, prod: assets/). Let Vite serve/emit the worker file and give its URL explicitly.
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds, getNatural, getNaturalLabel } from './utils'
+import { getBounds, getNatural, getNaturalLabel, getSpeciesName, getTagsCompleteness } from './utils'
 import { EditableFeature, MapTabParams, OverpassFeature } from './types'
-import { naturalTypes } from './consts'
+import { naturalTypes, osmConfig } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
@@ -55,6 +55,7 @@ setWorkerUrl(maplibreWorkerUrl)
 const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
+    const [mapLoaded, setMapLoaded] = useState(false)
 
     const featureMarkers = useContext(FeatureMarkersContext)
     const selectedFeature = useContext(SelectedFeatureContext)
@@ -110,53 +111,22 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         ]
     }
 
-    useEffect(() => {
-        const reloadedIds = new Set(uploaded.value.features.map((feature) => feature.id))
-        for (const id of uploaded.value.idsToDelete) {
-            if (id > 0 && !reloadedIds.has(id)) deletedIds.current.add(id)
-        }
-        loadFeatures(uploaded.value.features, uploaded.value.idsToDelete)
-    }, [uploaded])
-
-    useEffect(() => {
-        if (map.current) return
-
-        if (mapContainer.current) {
-            map.current = new Map({
-                container: mapContainer.current,
-                style: orthoStyle,
-                center: [lng, lat],
-                zoom: zoom,
-                hash: true
-            })
-
-            map.current.addControl(
-                new NavigationControl({
-                    visualizePitch: true,
-                    showZoom: true,
-                    showCompass: true
-                })
-            )
-
-            const scale = new ScaleControl({
-                maxWidth: 80,
-                unit: 'metric'
-            })
-            map.current.addControl(scale)
-
-            map.current.addControl(new GeolocateControl({
-                positionOptions: {
-                    enableHighAccuracy: true
-                },
-                trackUserLocation: true
-            }))
-
-            map.current.on('load', onMapLoad)
-        }
-    }, [lng, lat, zoom])
+    // the OSM credit is always shown (AttributionControl's customAttribution):
+    // remove the style's own OSM link, e.g. Jawg's "© JawgMaps | © OpenStreetMap"
+    const withoutOsmAttribution = (style: StyleSpecification): StyleSpecification => {
+        const osmLink = /\s*\|?\s*<a [^>]*openstreetmap\.org\/copyright[^>]*>.*?<\/a>/g
+        const sources = Object.fromEntries(Object.entries(style.sources).map(([id, source]) => [
+            id,
+            'attribution' in source && source.attribution !== undefined
+                ? { ...source, attribution: source.attribution.replace(osmLink, '').trim() }
+                : source
+        ]))
+        return { ...style, sources: sources as StyleSpecification['sources'] }
+    }
 
     const onMapLoad = () => {
         //console.log('onMapLoad')
+        setMapLoaded(true)
         if (map && map.current) {
             map.current.on('moveend', onMapMove)
             map.current.on('click', unselectFeature)
@@ -171,6 +141,15 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
             // init map data
             onMapMove()
+            // new features restored from the local save (Overpass doesn't know them)
+            loadFeatures(Object.values(editedFeaturesRef.current)
+                .filter(({ feature }) => feature.id < 0)
+                .map(({ feature, editingProperties }) => {
+                    const newPosition = editingProperties.getNewPosition()
+                    // a feature placed after its creation by an identification has no geometry yet
+                    return newPosition ? { ...feature, geometry: { type: 'Point' as const, coordinates: [newPosition.lng, newPosition.lat] } } : feature
+                })
+                .filter((feature) => feature.geometry.coordinates[0] !== 0 || feature.geometry.coordinates[1] !== 0))
         }
     }
 
@@ -267,13 +246,17 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 //icon.src = treeImgs[Math.floor(Math.random() * 31)]
                 icon.style.cssText = 'width: 14px;'
                 element.appendChild(icon)
-                styleMarkerElement(element, feature.properties.natural)
+                // a feature in the upload queue (e.g. restored after a reload) shows its pending changes
+                const queued = editedFeaturesRef.current[feature.id]?.editingProperties
+                styleMarkerElement(element, queued?.getValue('natural') ?? feature.properties.natural)
+                setMarkerCompleteness(element, queued?.getTagsToSend() ?? feature.properties)
+                if (queued?.isDeleted()) element.classList.add('feature-marker-deleted')
                 // add this feature as a marker
                 const featureMarker = new FeatureMarker(feature, {
                     element: element,
                     clickTolerance: 2
                 })
-                featureMarker.setLngLat([feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
+                featureMarker.setLngLat(queued?.getNewPosition() ?? [feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
                 if (map.current) featureMarker.addTo(map.current)
                 element.addEventListener('click', (e) => {
                     selectFeature(feature.id, undefined)
@@ -290,9 +273,15 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const styleMarkerElement = (element: HTMLElement, natural: string | undefined) => {
         const naturalType = natural !== undefined ? naturalTypes[natural] : undefined
         if (naturalType === undefined) return
-        element.style.backgroundColor = naturalType.color
+        // painted by .feature-marker::after, above the completeness pie (::before)
+        element.style.setProperty('--marker-color', naturalType.color)
         const icon = element.querySelector('img')
         if (icon) icon.src = naturalType.icon
+    }
+
+    // fill the completeness pie behind the marker (expectedTags), clockwise from the top
+    const setMarkerCompleteness = (element: HTMLElement, tags: Record<string, string>) => {
+        element.style.setProperty('--completeness', `${Math.round(getTagsCompleteness(tags) * 360)}deg`)
     }
 
     // update the existing marker in place (no remove/recreate: keeps the selection,
@@ -302,11 +291,15 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         if (featureMarker === undefined) return // e.g. feature created in IdentifierTab, not on the map yet
         const natural = editingProperties?.getValue('natural') ?? feature.properties.natural
         styleMarkerElement(featureMarker.getElement(), natural)
+        setMarkerCompleteness(featureMarker.getElement(), editingProperties?.getTagsToSend() ?? feature.properties)
+        // edited position, else the original one (e.g. after Cancel)
+        const [lng, lat] = feature.geometry.coordinates
+        featureMarker.setLngLat(editingProperties?.getNewPosition() ?? [lng, lat])
     }
 
     useEffect(() => {
         if (selectedFeature.value !== null) {
-            // natural type may have changed (IdentifierTab): refresh the marker look
+            // natural type or position may have changed (IdentifierTab, Cancel): refresh the marker
             updateMarker(selectedFeature.value.feature, selectedFeature.value.editingProperties)
         }
     }, [selectedFeature.value])
@@ -373,13 +366,14 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             }
 
             if (locateSelectedFeature && selectedFeature.value !== null) {
-                // locate the current selected feature
+                // locate the current selected feature: only the editing properties get the new position,
+                // feature.geometry keeps the original one (Cancel puts the marker back there)
                 const feature = selectedFeature.value.feature
-                feature.geometry = pointGeom
                 // conserve current editing properties
                 const editingProperties = selectedFeature.value.editingProperties
                 editingProperties.setNewPosition(center)
-                loadFeatures([feature])
+                // a feature without marker yet (created by an identification, at [0, 0]) gets one here
+                if (!(feature.id in featureMarkers.value)) loadFeatures([{ ...feature, geometry: pointGeom }])
                 selectFeature(feature.id, editingProperties)
             } else { // create a new feature and select it
                 const feature: OverpassFeature = {
@@ -421,7 +415,9 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         const newMapStyle = !mapStyle
         if (map.current) {
             if (newMapStyle) {
-                map.current.setStyle('https://api.jawg.io/styles/77df562c-113e-451b-bc77-1634aedeee25.json?access-token=UG9wQV1RcEgsXwkTX9M9qfBUV0ZckAfUhlqa3W4hK16gVbTFDUSMXrn60H1hEE6d')
+                map.current.setStyle('https://api.jawg.io/styles/77df562c-113e-451b-bc77-1634aedeee25.json?access-token=UG9wQV1RcEgsXwkTX9M9qfBUV0ZckAfUhlqa3W4hK16gVbTFDUSMXrn60H1hEE6d', {
+                    transformStyle: (_previous, next) => withoutOsmAttribution(next)
+                })
             } else {
                 map.current.setStyle(orthoStyle)
             }
@@ -453,29 +449,92 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         }
     }
 
-    if (mapTabRef) {
+    useEffect(() => {
+        const reloadedIds = new Set(uploaded.value.features.map((feature) => feature.id))
+        for (const id of uploaded.value.idsToDelete) {
+            if (id > 0 && !reloadedIds.has(id)) deletedIds.current.add(id)
+        }
+        loadFeatures(uploaded.value.features, uploaded.value.idsToDelete)
+    }, [uploaded.value]) // the state, not the context object (new at each App render)
+
+    useEffect(() => {
+        if (map.current) return
+
+        if (mapContainer.current) {
+            map.current = new Map({
+                container: mapContainer.current,
+                style: orthoStyle,
+                center: [lng, lat],
+                zoom: zoom,
+                hash: true,
+                attributionControl: false // added below, with the OSM credit
+            })
+
+            // the trees come from OSM whatever the background: credit it with every style
+            // (customAttribution doesn't depend on the style's sources: it survives setStyle)
+            map.current.addControl(new AttributionControl({
+                customAttribution: "<a href='https://www.openstreetmap.org/copyright' target='_blank'>&copy; les contributeurs d'OpenStreetMap</a>"
+            }))
+
+            map.current.addControl(
+                new NavigationControl({
+                    visualizePitch: true,
+                    showZoom: true,
+                    showCompass: true
+                })
+            )
+
+            const scale = new ScaleControl({
+                maxWidth: 80,
+                unit: 'metric'
+            })
+            map.current.addControl(scale)
+
+            map.current.addControl(new GeolocateControl({
+                positionOptions: {
+                    enableHighAccuracy: true
+                },
+                trackUserLocation: true
+            }))
+
+            map.current.on('load', onMapLoad)
+        }
+    }, [lng, lat, zoom])
+
+    useEffect(() => { // keep the latest closures (current markers and selection)
         mapTabRef.current = onLocateFeature
-    }
-    useEffect(() => { // keep the latest closure (current markers and selection)
         focusFeatureRef.current = focusFeature
     })
 
     return (
         <div id="map" className="map" ref={mapContainer}>
-            <a className="title">
-                <img src={logo} className="logo" alt="osmtree" />
-                osmtree
-                {selectedFeature.value && <span>id={selectedFeature.value?.feature.id}</span>}
-            </a>
-            {selectedFeature.value !== null && <div className='selection_info'>
-                <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
-                    selectedFeature.value.feature.properties['species:fr'] 
-                    : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
-                    selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
-                <br/>
-                <span>{getNaturalLabel(getNatural(selectedFeature.value))}</span>
-            </div>}
-            { map.current && 
+            <div className="title">
+                <img src={logo} className="logo" alt="" />
+                <span>osmtree</span>
+            </div>
+            {selectedFeature.value !== null && (() => {
+                // edited tags, so that the text follows the changes
+                const tags = selectedFeature.value.editingProperties.getTagsToSend()
+                const id = selectedFeature.value.feature.id
+                const natural = getNatural(selectedFeature.value)
+                const naturalType = natural !== undefined ? naturalTypes[natural] : undefined
+                return <div className='selection_info'>
+                    {naturalType && <div className='selection_icon' style={{ backgroundColor: naturalType.color }}>
+                        <img src={naturalType.icon} alt='' />
+                    </div>}
+                    <div>
+                        <div className='species_name'>{getSpeciesName(tags)}</div>
+                        {tags['genus'] && <div className='genus_name'>{tags['genus']}</div>}
+                        <div>{getNaturalLabel(natural)}</div>
+                        <div className='feature_id'>
+                            {id > 0
+                                ? <a href={`${osmConfig.url}/node/${id}`} target='_blank' rel='noreferrer'>node/{id}</a>
+                                : `nouvel élément (id temporaire ${id})`}
+                        </div>
+                    </div>
+                </div>
+            })()}
+            { mapLoaded && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
                     <button className='maplibregl-ctrl-compass'
                         onClick={() => { setAutoBearing(!autoBearing) }}
@@ -484,7 +543,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                     </button>
                 </div>
             }
-            { map.current && 
+            { mapLoaded && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-map-style'>
                     <button className='maplibregl-ctrl-compass'
                         onClick={switchMapStyle}

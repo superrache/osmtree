@@ -15,18 +15,22 @@
     z-index: 500;
     top: 5px;
     left: 5px;
+    display: flex;
+    align-items: center; /* text centred on the icon */
+    gap: 0.25em;
     background-color: #353735;
+    color: white;
     border-radius: 5px;
-    padding-right: 15px;
-    padding-bottom: 5px;
+    padding: 4px 12px 4px 6px;
     font-size: 2em;
+    line-height: 1;
     font-weight: 500;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
 .logo {
+    display: block;
     height: 1em;
-    padding: 0.2em;
 }
 
 .selection_info {
@@ -40,10 +44,36 @@
     border-radius: 5px;
     border: #ff9454 solid 2px;
     padding: 5px;
+    display: flex;
+    align-items: flex-start; /* icon anchored at the top left */
+    gap: 8px;
+}
+
+/* natural type icon, drawn like the map marker */
+.selection_icon {
+    flex: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 100%;
+}
+
+.selection_icon img {
+    width: 24px;
 }
 
 .species_name {
     font-weight: 900;
+}
+
+.genus_name {
+    font-style: italic;
+}
+
+.feature_id {
+    font-size: 0.8em;
 }
 
 .loading {
@@ -61,7 +91,6 @@
     display: block;
     border: none;
     border-radius: 100%;
-    outline: 2px solid white;
     cursor: pointer;
     padding: 3px;
     width: 20px;
@@ -71,8 +100,30 @@
     align-items: center;
 }
 
+/* completeness pie (expectedTags), larger than the marker: white share filled clockwise from the top */
+.feature-marker::before {
+    content: '';
+    position: absolute;
+    inset: -7px;
+    border-radius: 100%;
+    background: conic-gradient(white var(--completeness, 0deg), rgba(0, 0, 0, 0.45) 0);
+    z-index: -2;
+}
+
+/* natural type colour, above the pie (the element's own background would be under it) */
+.feature-marker::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 100%;
+    background-color: var(--marker-color, #777);
+    z-index: -1;
+}
+
+/* outside the pie, so that it stays visible */
 .feature-marker-selected {
-    outline: 8px solid #ff9454;
+    outline: 4px solid #ff9454;
+    outline-offset: 7px;
 }
 
 .creating-position-buttons {

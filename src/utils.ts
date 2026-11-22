@@ -1,6 +1,6 @@
 import { Map } from "maplibre-gl"
-import { EditableFeature } from "./types"
-import { naturalTypes } from "./consts"
+import { EditableFeature, ExpectedTag } from "./types"
+import { expectedTags, naturalTypes } from "./consts"
 
 // API (Cloudflare Pages Functions) is always served on the same origin as the client
 // (in dev, Vite proxies /api to `wrangler pages dev`)
@@ -35,3 +35,26 @@ export const getNaturalLabel = (natural: string | undefined): string => {
     if (natural === undefined) return ''
     return naturalTypes[natural]?.label ?? natural
 }
+
+// species name to display: French name, else scientific name
+export const getSpeciesName = (properties: Record<string, string>): string => {
+    return properties['species:fr'] ?? properties['species'] ?? 'inconnu'
+}
+
+// a feature goes to the upload queue as soon as it has changes (like iD: no validation step);
+// a feature without position (created by an identification) waits until it is placed
+export const isToUpload = (ef: EditableFeature): boolean => {
+    const [lng, lat] = ef.feature.geometry.coordinates
+    const hasPosition = ef.editingProperties.getNewPosition() !== undefined || lng !== 0 || lat !== 0
+    return ef.editingProperties.isDeleted() || (hasPosition && ef.editingProperties.getChangedCount() > 0)
+}
+
+// expected tags that are not set yet
+export const getMissingExpectedTags = (tags: Record<string, string>): ExpectedTag[] => {
+    const keys = Object.keys(tags).filter((key) => tags[key] !== '')
+    return expectedTags.filter(({ pattern }) => !keys.some((key) => pattern.test(key)))
+}
+
+// share (0 to 1) of the expected tags that are set
+export const getTagsCompleteness = (tags: Record<string, string>): number =>
+    1 - getMissingExpectedTags(tags).length / expectedTags.length

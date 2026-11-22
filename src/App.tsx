@@ -9,7 +9,7 @@ import IdentifierTab from "./IdentifierTab"
 import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
-import { EditableFeature, OSMConnection, SelectedFeature, Tab, Uploaded } from "./types"
+import { EditableFeature, OSMConnection, OsmRequestClient, PreviousFeature, SelectedFeature, Tab, Uploaded } from "./types"
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from "./contexts"
 import { osmAuth } from 'osm-auth'
 import OsmRequest from 'osm-request'
@@ -17,43 +17,94 @@ import { osmConfig } from "./consts"
 import NotificationBadge from "./NotificationBadge"
 import WikiTab from "./WikiTab"
 import { FeatureMarker } from "./FeatureMarker"
+import { loadEditedFeatures, saveEditedFeatures } from "./editedFeaturesStorage"
+import { getSpeciesWikidata } from "./wikidata"
+import { isToUpload } from "./utils"
+
+// single instances for the whole app (osm-request uses osm-auth once connected)
+const auth = new osmAuth(osmConfig)
+const osmRequest: OsmRequestClient = new OsmRequest(osmConfig)
 
 const App = () => {
     const [activeTab, setActiveTab] = useState(0)
     const [selectedFeature, setSelectedFeature] = useState<SelectedFeature>(null)
     const [featureMarkers, setFeatureMarkers] = useState<Record<number, FeatureMarker>>({})
     const [mapBounds, setMapBounds] = useState<string>('0,0,0,0')
-    const [osmConnection, setOsmConnection] = useState<OSMConnection>({
+    const [osmConnection, setOsmConnection] = useState<OSMConnection>(() => ({
         userName: '',
-        auth: new osmAuth(osmConfig),
-        osmRequest: new OsmRequest(osmConfig),
-        editedFeatures: {}
-    })
-    const [currentId, setCurrentId] = useState<number>(-1)
+        auth: auth,
+        osmRequest: osmRequest,
+        editedFeatures: loadEditedFeatures() // queue saved before a reload
+    }))
+    // ids of the new features: -1, -2… (a ref, so that two creations in the same render get different ids)
+    // after a reload, continue below the restored new features
+    const nextNewId = useRef(Math.min(0, ...Object.keys(osmConnection.editedFeatures).map(Number)) - 1)
+    // tags of the last edited feature, to duplicate them on the next one (e.g. a row of trees)
+    const [previousFeature, setPreviousFeature] = useState<PreviousFeature>(null)
+    // selection as last set (setSelection is also called from MapLibre handlers registered once)
+    const selectedFeatureRef = useRef<SelectedFeature>(null)
     const [uploaded, setUploaded] = useState<Uploaded>({features: [], idsToDelete: []})
 
-    const [readyToSendFeatureCount, setReadyToSendFeatureCount] = useState(0)
+    // every change of the selected feature goes to the upload queue right away (like iD):
+    // no validation step, nothing is lost when another feature or the map is clicked.
+    // Only refs and stable setters here: frozen closures (MapLibre handlers) call it too.
+    const setSelection = (value: SelectedFeature) => {
+        const previous = selectedFeatureRef.current
+        selectedFeatureRef.current = value
+        setSelectedFeature(value)
+        if (previous !== null && previous.feature.id !== value?.feature.id
+            && isToUpload(previous) && !previous.editingProperties.isDeleted()) {
+            setPreviousFeature({ id: previous.feature.id, tags: previous.editingProperties.getTagsToSend() })
+        }
+        if (value === null) return
+        const id = value.feature.id
+        setOsmConnection((connection) => {
+            const toUpload = isToUpload(value)
+            if (!toUpload && !(id in connection.editedFeatures)) return connection
+            const editedFeatures = { ...connection.editedFeatures }
+            if (toUpload) editedFeatures[id] = value
+            else delete editedFeatures[id] // back to the original state (e.g. Cancel)
+            return { ...connection, editedFeatures: editedFeatures }
+        })
+    }
+
+    useEffect(() => {
+        saveEditedFeatures(osmConnection.editedFeatures)
+    }, [osmConnection.editedFeatures])
+
+    // a selected feature with species or species:fr but no species:wikidata gets it automatically
+    // (like any change, it goes to the upload queue; Annuler reverts it)
+    const selectedId = selectedFeature?.feature.id
+    useEffect(() => {
+        const selection = selectedFeatureRef.current
+        if (selection === null || selection.editingProperties.isDeleted()) return
+        const tags = selection.editingProperties.getTagsToSend()
+        // a deleted species:wikidata (still in the list) was removed on purpose: don't add it back
+        if (selection.editingProperties.getProps().some((prop) => prop.key === 'species:wikidata')) return
+        const species = tags['species']
+        const speciesFr = tags['species:fr']
+        if (species === undefined && speciesFr === undefined) return
+        let cancelled = false
+        getSpeciesWikidata(species, speciesFr).then((wikidata) => {
+            const current = selectedFeatureRef.current
+            if (cancelled || wikidata === undefined || current === null || current.feature.id !== selection.feature.id) return
+            // the tags may have changed during the lookup
+            const currentTags = current.editingProperties.getTagsToSend()
+            if (currentTags['species'] !== species || currentTags['species:fr'] !== speciesFr
+                || current.editingProperties.getProps().some((prop) => prop.key === 'species:wikidata')) return
+            console.log(`species:wikidata=${wikidata} added to ${current.feature.id}`)
+            current.editingProperties.modifyValue('species:wikidata', wikidata)
+            setSelection({ ...current })
+        })
+        return () => { cancelled = true }
+    }, [selectedId]) // on selection only (setSelection uses refs)
 
     const mapTabRef = useRef<(() => void) | undefined>(undefined)
     const focusFeatureRef = useRef<((feature: EditableFeature) => void) | undefined>(undefined)
 
-    useEffect(() => {
-        console.log('APP: selectedFeature updated', selectedFeature !== null ? selectedFeature.feature.id : null)
-        const attrCount = (selectedFeature !== null && selectedFeature.editingProperties) ? selectedFeature.editingProperties.getChangedCount() : 0
-        if (attrCount !== tabs[1].notificationCount) {
-            tabs[1].notificationCount = attrCount
-            setTabs(Array.from(tabs))
-        }
-    }, [selectedFeature])
-
-    useEffect(() => {
-        const featureCount = Object.keys(osmConnection.editedFeatures).length
-        if (readyToSendFeatureCount !== featureCount) {
-            setReadyToSendFeatureCount(featureCount)
-            tabs[4].notificationCount = featureCount
-            setTabs(tabs)
-        }
-    }, [osmConnection])
+    // notification badges, derived from the state
+    const changedAttributesCount = selectedFeature !== null ? selectedFeature.editingProperties.getChangedCount() : 0
+    const readyToSendFeatureCount = Object.keys(osmConnection.editedFeatures).length
 
     const handleOnLocateFeature = () => {
         setActiveTab(0)
@@ -72,8 +123,8 @@ const App = () => {
 
     const osmLogin = () => {
         console.log('osmLogin')
-        if (osmConnection.auth && !osmConnection.auth.authenticated()) {
-            osmConnection.auth.authenticate((err: any) => {
+        if (!auth.authenticated()) {
+            auth.authenticate((err) => {
                 if(err) {
                     console.error(err)
                     osmLogout()
@@ -85,61 +136,50 @@ const App = () => {
         }
     }
 
+    // functional updates: these callbacks may run long after the render that created them
     const osmLogout = () => {
         console.log('osmLogout')
-        if (osmConnection.auth && osmConnection.auth.authenticated()) {
-            osmConnection.auth.logout()
-            osmConnection.osmRequest._auth = null
-            setOsmConnection({
-                userName: '',
-                auth: osmConnection.auth,
-                osmRequest: osmConnection.osmRequest,
-                editedFeatures: osmConnection.editedFeatures
-            })
+        if (auth.authenticated()) {
+            auth.logout()
+            osmRequest._auth = null
+            setOsmConnection((connection) => ({ ...connection, userName: '' }))
         }
     }
 
     const getOsmUserName = () => {
         console.log('getOsmUserName')
-        if(osmConnection.auth.authenticated() && osmConnection.userName.length === 0) {
+        if(auth.authenticated()) {
             //Get user details
-            osmConnection.auth.xhr({
+            auth.xhr({
                 method: 'GET',
                 path: '/api/0.6/user/details'
-            }, (err: any, details: any) => {
+            }, (err, details) => {
                 if(err) {
                     console.log(err)
                     osmLogout()
+                    return
                 }
-                else {
-                    try {
-                        const userName = details.firstChild.childNodes[1].attributes.display_name.value
-                        console.log('connected as', userName)
-                        osmConnection.osmRequest._auth = osmConnection.auth
-                        // update context
-                        setOsmConnection({
-                            userName: userName,
-                            auth: osmConnection.auth,
-                            osmRequest: osmConnection.osmRequest,
-                            editedFeatures: osmConnection.editedFeatures
-                        })
-                    }
-                    catch(e) {
-                        console.error(e)
-                        osmLogout()
-                    }
+                const userName = details instanceof Document ? details.querySelector('user')?.getAttribute('display_name') : null
+                if (!userName) {
+                    console.error('OSM user details without display_name', details)
+                    osmLogout()
+                    return
                 }
+                console.log('connected as', userName)
+                osmRequest._auth = auth
+                // update context
+                setOsmConnection((connection) => ({ ...connection, userName: userName }))
             })
         }
     }
 
-    const [tabs, setTabs] = useState<Tab[]>([
+    const tabs: Tab[] = [
         { icon: mapImg, label: 'Carte', notificationCount: 0, content: <MapTab mapTabRef={mapTabRef} focusFeatureRef={focusFeatureRef}></MapTab> },
-        { icon: attributesImg, label: 'Attributs', notificationCount: 0, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
+        { icon: attributesImg, label: 'Attributs', notificationCount: changedAttributesCount, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
         { icon: identifyImg, label: 'Assistant', notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
         { icon: imageImg, label: 'Wiki', notificationCount: 0, content: <WikiTab></WikiTab> },
-        { icon: uploadImg, label: 'Envoi OSM', notificationCount: 0, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout} onShowFeature={handleShowFeature}></UploadTab> }
-    ])
+        { icon: uploadImg, label: 'Envoi OSM', notificationCount: readyToSendFeatureCount, content: <UploadTab osmLogin={osmLogin} osmLogout={osmLogout} onShowFeature={handleShowFeature}></UploadTab> }
+    ]
 
     // landing from osm authentication page: handled once per page load, in an effect
     // (in render, StrictMode's double render called authenticate() again after the saved
@@ -157,8 +197,8 @@ const App = () => {
             window.history.replaceState(null, '', window.location.pathname + window.location.hash)
             if (error !== null) {
                 console.error('OSM authentication refused', error, params.get('error_description'))
-            } else if (code !== null && !osmConnection.auth.authenticated()) {
-                osmConnection.auth.bootstrapToken(code, (err: unknown) => {
+            } else if (code !== null && !auth.authenticated()) {
+                auth.bootstrapToken(code, (err) => {
                     if (err) {
                         console.error('OSM authentication failed', err)
                         return
@@ -168,7 +208,7 @@ const App = () => {
                     setActiveTab(4)
                 }, params.get('state') ?? undefined)
             }
-        } else if (osmConnection.auth.authenticated() && osmConnection.userName.length === 0) {
+        } else if (auth.authenticated()) {
             // already connected at startup, just update username
             getOsmUserName()
         }
@@ -186,8 +226,9 @@ const App = () => {
             }}>
                 <SelectedFeatureContext.Provider value={{
                     value: selectedFeature,
-                    setValue: setSelectedFeature,
-                    getNewId: () => {setCurrentId(currentId - 1); return currentId}
+                    setValue: setSelection,
+                    previous: previousFeature,
+                    getNewId: () => nextNewId.current--
                 }}>
                     <UploadedContext.Provider value={{
                         value: uploaded,

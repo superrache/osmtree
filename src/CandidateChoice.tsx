@@ -1,29 +1,35 @@
 import { CandidateChoiceParams, PlantNetCandidate } from './types'
 import './CandidateChoice.css'
 import { rgbaToHex } from './utils'
+import { getWikidataFromGbif } from './wikidata'
 
 const CandidateChoice = ({candidates, setCandidates, localizedSpeciesKey, handleSelectCandidate}: CandidateChoiceParams) => {  
     if (candidates.length === 0) {
         return null
     }
 
-    const onResultSelect = (index: number) => {
-        // console.log('onResultSelect', index)
+    const onResultSelect = async (index: number) => {
+        // show the selection right away
         const newCandidates: PlantNetCandidate[] = [] // for re-rendering
         candidates.forEach((candidate, idx) => {
             candidate.selected = (index === idx)
             newCandidates.push(candidate)
-            if (candidate.selected) {
-                const props: Record<string, string> = {}
-                // modify properties
-                if (candidate.localizedSpecies) props[localizedSpeciesKey] = candidate.localizedSpecies
-                if (candidate.genus) props['genus'] = candidate.genus
-                if (candidate.species) props['species'] = candidate.species
-                props['survey:date'] = new Date().toISOString().split('T')[0]
-                handleSelectCandidate(props)
-            }
         })
         setCandidates(newCandidates)
+
+        const candidate = candidates[index]
+        const props: Record<string, string> = {}
+        if (candidate.localizedSpecies) props[localizedSpeciesKey] = candidate.localizedSpecies
+        if (candidate.genus) props['genus'] = candidate.genus
+        if (candidate.species) props['species'] = candidate.species
+        // Wikidata item of the species (left out if not found: IdentifierTab drops an outdated one)
+        const wikidata = (candidate.species && candidate.gbifId) ? await getWikidataFromGbif(candidate.gbifId) : undefined
+        if (wikidata !== undefined) props['species:wikidata'] = wikidata
+        props['check_date'] = new Date().toISOString().split('T')[0]
+
+        // another candidate chosen during the Wikidata lookup: it wins
+        if (!candidate.selected) return
+        handleSelectCandidate(props)
     }
 
     return (

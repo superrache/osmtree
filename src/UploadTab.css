@@ -3,7 +3,7 @@
     margin: 10px;
 }
 
-li {
+.upload_tab li {
     list-style: disc;
 }
 
@@ -26,4 +26,7 @@ li {
     white-space: pre-line;
     margin: 10px;
     padding: 10px;
+}
+.cancel-all {
+    background-color: #af2700;
 }

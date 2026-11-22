@@ -35,3 +35,13 @@ table {
 .delete-feature {
     background-color: #af2700;
 }
+
+/* expected tags not set yet (completeness pie of the marker) */
+.missing-tags {
+    font-style: italic;
+    margin: 5px 10px;
+}
+
+.missing-tag {
+    cursor: pointer;
+}

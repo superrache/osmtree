@@ -1,6 +1,7 @@
 import type { Feature as GeoJSONFeature, Point } from "geojson"
 import { EditingProperties } from "./EditingProperties"
 import { FeatureMarker } from "./FeatureMarker"
+import type { osmAuth } from "osm-auth"
 
 export type Tab = {
     icon: string
@@ -37,6 +38,7 @@ export type PlantNetCandidate = {
     genus: string
     species: string
     localizedSpecies: string
+    gbifId: string // GBIF taxon id ('' if unknown), used to find the Wikidata item
     selected: boolean
 }
 
@@ -60,6 +62,13 @@ export type UploadTabParams = {
 export type MapTabParams = {
     mapTabRef: React.RefObject<(() => void) | undefined>
     focusFeatureRef: React.RefObject<((feature: EditableFeature) => void) | undefined>
+}
+
+// tag expected on a feature (completeness pie of the markers)
+export type ExpectedTag = {
+    label: string // shown in the missing tags text
+    key: string // added to the attributes table on a click
+    pattern: RegExp // keys that fill this share
 }
 
 export type NaturalType = {
@@ -99,9 +108,13 @@ export type EditableFeature = {
 
 export type SelectedFeature = EditableFeature | null
 
+// tags of the last edited feature (button "Dupliquer les attributs de l'élément précédent")
+export type PreviousFeature = { id: number, tags: Record<string, string> } | null
+
 export type SelectedFeatureContextValue = {
     value: SelectedFeature
-    setValue: (value: SelectedFeature) => void
+    setValue: (value: SelectedFeature) => void // also updates the upload queue
+    previous: PreviousFeature
     getNewId: () => number
 }
 
@@ -115,10 +128,29 @@ export type MapContextValue = {
     setBounds: (bounds: string) => void
 }
 
+// OSM element as handled by osm-request (opaque here)
+export type OsmElement = object
+
+// the part of osm-request used by the app (the package ships no types)
+export type OsmRequestClient = {
+    _auth: osmAuth | null // injected once connected
+    createChangeset: (createdBy: string, comment: string) => Promise<string>
+    closeChangeset: (changesetId: string) => Promise<unknown>
+    fetchElement: (osmId: string) => Promise<OsmElement>
+    fetchWaysForNode: (osmId: string) => Promise<OsmElement[]>
+    fetchRelationsForElement: (osmId: string) => Promise<OsmElement[]>
+    createNodeElement: (lat: number, lon: number, tags: Record<string, string>) => OsmElement
+    setCoordinates: (element: OsmElement, lat: number, lon: number) => OsmElement
+    removeTag: (element: OsmElement, key: string) => OsmElement
+    setTags: (element: OsmElement, tags: Record<string, string>) => OsmElement
+    sendElement: (element: OsmElement, changesetId: string) => Promise<number | string> // new id of a created element
+    deleteElement: (element: OsmElement, changesetId: string) => Promise<unknown>
+}
+
 export type OSMConnection = {
     userName: string
-    auth: any | null
-    osmRequest: any | null
+    auth: osmAuth
+    osmRequest: OsmRequestClient
     editedFeatures: Record<number, EditableFeature>
 }
 
