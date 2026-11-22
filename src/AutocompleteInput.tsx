@@ -11,7 +11,13 @@ interface InputProps {
 const debounceMs = 250
 
 const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, onValueChange }) => {
-    const [innerValue, setInnerValue] = useState<string>('')
+    const [innerValue, setInnerValue] = useState<string>(value)
+    // sync with the value prop during render (no effect): see "adjusting state when a prop changes"
+    const [prevValue, setPrevValue] = useState<string>(value)
+    if (value !== prevValue) {
+        setPrevValue(value)
+        setInnerValue(value)
+    }
     const [suggestions, setSuggestions] = useState<string[]>([])
     const [cursor, setCursor] = useState(-1)
     const containerRef = useRef<HTMLDivElement | null>(null)
@@ -25,15 +31,11 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
         return () => clearTimeout(debounceTimer.current) // unmount
     }, [])
 
-    // console.log('init autocompleteinput', value, other)
-
-    useEffect(() => {
-        onValueChange(value, other, innerValue)
-    }, [innerValue])
-    
-    useEffect(() => {
-        setInnerValue(value)
-    }, [value])
+    // the parent is notified from the handlers that change the text (typing, selection)
+    const changeValue = (newVal: string) => {
+        setInnerValue(newVal)
+        onValueChange(value, other, newVal)
+    }
 
     // close the list and drop pending or in-flight requests
     const closeSuggestions = () => {
@@ -60,13 +62,13 @@ const AutocompleteInput: FC<InputProps> = ({ value, other, suggestionsFunction, 
     }
 
     const onInput = (val: string) => {
-        setInnerValue(val)
+        changeValue(val)
         fetchSuggestions(val)
     }
 
     const selectItem = (suggestion: string | undefined) => {
         if (suggestion) {
-            setInnerValue(suggestion)
+            changeValue(suggestion)
             closeSuggestions()
         }
     }

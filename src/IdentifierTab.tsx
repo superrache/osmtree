@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useState } from 'react'
 import './IdentifierTab.css'
 import PlantNetIdentifyForm from './PlantNetIdentifyForm'
 import { PlantNetIdentifyParams, PlantNetCandidate, OverpassFeature } from './types'
 import CandidateChoice from './CandidateChoice'
-import { getApiUrl, getNatural, getNaturalLabel } from './utils'
+import { getApiUrl, getNatural, getNaturalLabel, getSpeciesName } from './utils'
 import { SelectedFeatureContext } from './contexts'
 import { combinations, naturalTypes } from './consts'
 import { EditingProperties } from './EditingProperties'
@@ -16,34 +16,48 @@ const IdentifierTab = () => {
     const [localizedSpeciesKey, setLocalizedSpeciesKey] = useState<string>('species:en')
     const [isLoading, setIsLoading] = useState<boolean>(false)
     const [candidates, setCandidates] = useState<PlantNetCandidate[]>([])
-    const [naturalType, setNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
+    // type and combinations chosen without selection (applied to a feature created by an identification)
+    const [lastNaturalType, setLastNaturalType] = useState<string>(Object.keys(naturalTypes)[0])
     const [selectedCombinations, setSelectedCombinations] = useState<Record<string, string>>({})
 
-    useEffect(() => {
-        if (selectedFeature.value !== null) {
-            const natType = getNatural(selectedFeature.value) ?? naturalType
-            // select the natural type
-            setNaturalType(natType)
-            // update combinations types from selected feature editing properties
-            const newSelectedCombinations: Record<string, string> = {}
-            for (const [key, combination] of Object.entries(combinations)) {
-                if (combination.natural.includes(natType)) {
-                    // display only: a value unknown to the assistant (e.g. leaf_type=mixed) highlights nothing
-                    const val = selectedFeature.value.editingProperties.getValue(key)
-                    newSelectedCombinations[key] = val || Object.keys(combination.values)[0] // none
-                }
-            }
-            setSelectedCombinations(newSelectedCombinations)
-        } else { // else (no selection) let the last natural type selected
-            const newSelectedCombinations: Record<string, string> = {}
-            for (const [key, combination] of Object.entries(combinations)) {
-                if (combination.natural.includes(naturalType)) {
-                    newSelectedCombinations[key] = Object.keys(combination.values)[0] // none
-                }
-            }
-            setSelectedCombinations(newSelectedCombinations)
+    // adjusted during render when the selection changes (no effect: see "you might not need an effect")
+    const selectedNatural = selectedFeature.value !== null ? getNatural(selectedFeature.value) : undefined
+    if (selectedNatural !== undefined && selectedNatural !== lastNaturalType) {
+        setLastNaturalType(selectedNatural) // kept after unselecting, as the default type
+    }
+    const [prevSelection, setPrevSelection] = useState(selectedFeature.value)
+    if (selectedFeature.value !== prevSelection) {
+        setPrevSelection(selectedFeature.value)
+        setSelectedCombinations({}) // back to "none" once unselected
+    }
+
+    const naturalType = selectedNatural ?? lastNaturalType
+
+    // displayed combinations: from the selected feature tags, else from the user's choices
+    const displayedCombinations: Record<string, string> = {}
+    for (const [key, combination] of Object.entries(combinations)) {
+        if (combination.natural.includes(naturalType)) {
+            // display only: a value unknown to the assistant (e.g. leaf_type=mixed) highlights nothing
+            const val = selectedFeature.value !== null ?
+                selectedFeature.value.editingProperties.getValue(key) :
+                selectedCombinations[key]
+            displayedCombinations[key] = val || Object.keys(combination.values)[0] // none
         }
-    }, [selectedFeature.value])
+    }
+
+    // a type clicked by the user: written to the selected feature
+    const onNaturalTypeClick = (tag: string) => {
+        setLastNaturalType(tag)
+        if (selectedFeature.value !== null && tag !== getNatural(selectedFeature.value)) {
+            // only the editing properties change: feature.properties keeps the original OSM tags (needed by Cancel)
+            const editingProperties = selectedFeature.value.editingProperties
+            editingProperties.modifyValue('natural', tag)
+            selectedFeature.setValue({
+                feature: selectedFeature.value.feature, // triggers an update of the marker
+                editingProperties: editingProperties
+            })
+        }
+    }
 
     // a combination clicked by the user: the only place where the assistant writes these tags
     // (no effect: an effect also ran when the tags were edited in AttributesTab and removed them)
@@ -59,18 +73,6 @@ const IdentifierTab = () => {
             })
         }
     }
-
-    useEffect(() => {
-        if (selectedFeature.value !== null && naturalType !== getNatural(selectedFeature.value)) {
-            // only the editing properties change: feature.properties keeps the original OSM tags (needed by Cancel)
-            const editingProperties = selectedFeature.value.editingProperties
-            editingProperties.modifyValue('natural', naturalType)
-            selectedFeature.setValue({
-                feature: selectedFeature.value.feature, // triggers an update of the marker
-                editingProperties: editingProperties
-            })
-        }
-    }, [naturalType])
 
     const handleIdentify = async (params: PlantNetIdentifyParams) => {
         setIsLoading(true)
@@ -98,7 +100,7 @@ const IdentifierTab = () => {
                 let genus = ''
                 let speciesScientificName = ''
                 if('species' in res) {
-                    let species = res['species']
+                    const species = res['species']
                     if('commonNames' in species && species['commonNames'].length > 0) localizedSpecies = species['commonNames'][0]
                     if('genus' in species && 'scientificNameWithoutAuthor' in species['genus']) genus = species['genus']['scientificNameWithoutAuthor']
                     if('scientificNameWithoutAuthor' in species) speciesScientificName = species['scientificNameWithoutAuthor']
@@ -157,7 +159,7 @@ const IdentifierTab = () => {
         // update from type selectors
         sf.editingProperties.modifyValue('natural', naturalType)
         // (already applied on click to a selected feature; needed when the feature is created here)
-        for (const [key, tag] of Object.entries(selectedCombinations)) {
+        for (const [key, tag] of Object.entries(displayedCombinations)) {
             if (tag !== 'none' && key in combinations && combinations[key].values[tag] !== undefined) {
                 sf.editingProperties.modifyValue(key, tag)
             }
@@ -184,10 +186,7 @@ const IdentifierTab = () => {
     return (
         <div className='identifier_tab'>
             {selectedFeature.value !== null && <div className='identifier_group identifier_selection_info'>
-                <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
-                    selectedFeature.value.feature.properties['species:fr'] 
-                    : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
-                    selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
+                <span className='species_name'>{getSpeciesName(selectedFeature.value.feature.properties)}</span>
                 <br/>
                 <span>{getNaturalLabel(getNatural(selectedFeature.value))}</span>
                 <br/>
@@ -200,7 +199,7 @@ const IdentifierTab = () => {
                         return (
                             <div className="thing" key={tag}
                                 style={{opacity: tag === naturalType ? 1 : 0.5}}
-                                onClick={() => setNaturalType(tag)}>
+                                onClick={() => onNaturalTypeClick(tag)}>
                                 <img src={nt.icon} width='50' />
                                 {nt.label}
                             </div>
@@ -217,7 +216,7 @@ const IdentifierTab = () => {
                             {Object.entries(combination.values).map(([tag, cbVal]) => {
                                 return (
                                     <div className="thing" key={tag}
-                                        style={{opacity: key in selectedCombinations && tag === selectedCombinations[key] ? 1 : 0.5}}
+                                        style={{opacity: tag === displayedCombinations[key] ? 1 : 0.5}}
                                         onClick={() => onCombinationClick(key, tag)}>
                                         <img src={cbVal.icon} width='50' />
                                         {cbVal.label}

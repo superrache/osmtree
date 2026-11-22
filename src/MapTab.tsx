@@ -42,7 +42,7 @@ import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateCont
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds, getNatural, getNaturalLabel } from './utils'
+import { getBounds, getNatural, getNaturalLabel, getSpeciesName } from './utils'
 import { EditableFeature, MapTabParams, OverpassFeature } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
@@ -55,6 +55,7 @@ setWorkerUrl(maplibreWorkerUrl)
 const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const map = useRef<Map | null>(null)
+    const [mapLoaded, setMapLoaded] = useState(false)
 
     const featureMarkers = useContext(FeatureMarkersContext)
     const selectedFeature = useContext(SelectedFeatureContext)
@@ -110,53 +111,9 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         ]
     }
 
-    useEffect(() => {
-        const reloadedIds = new Set(uploaded.value.features.map((feature) => feature.id))
-        for (const id of uploaded.value.idsToDelete) {
-            if (id > 0 && !reloadedIds.has(id)) deletedIds.current.add(id)
-        }
-        loadFeatures(uploaded.value.features, uploaded.value.idsToDelete)
-    }, [uploaded])
-
-    useEffect(() => {
-        if (map.current) return
-
-        if (mapContainer.current) {
-            map.current = new Map({
-                container: mapContainer.current,
-                style: orthoStyle,
-                center: [lng, lat],
-                zoom: zoom,
-                hash: true
-            })
-
-            map.current.addControl(
-                new NavigationControl({
-                    visualizePitch: true,
-                    showZoom: true,
-                    showCompass: true
-                })
-            )
-
-            const scale = new ScaleControl({
-                maxWidth: 80,
-                unit: 'metric'
-            })
-            map.current.addControl(scale)
-
-            map.current.addControl(new GeolocateControl({
-                positionOptions: {
-                    enableHighAccuracy: true
-                },
-                trackUserLocation: true
-            }))
-
-            map.current.on('load', onMapLoad)
-        }
-    }, [lng, lat, zoom])
-
     const onMapLoad = () => {
         //console.log('onMapLoad')
+        setMapLoaded(true)
         if (map && map.current) {
             map.current.on('moveend', onMapMove)
             map.current.on('click', unselectFeature)
@@ -171,6 +128,15 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
             // init map data
             onMapMove()
+            // new features restored from the local save (Overpass doesn't know them)
+            loadFeatures(Object.values(editedFeaturesRef.current)
+                .filter(({ feature }) => feature.id < 0)
+                .map(({ feature, editingProperties }) => {
+                    const newPosition = editingProperties.getNewPosition()
+                    // a feature placed after its creation by an identification has no geometry yet
+                    return newPosition ? { ...feature, geometry: { type: 'Point' as const, coordinates: [newPosition.lng, newPosition.lat] } } : feature
+                })
+                .filter((feature) => feature.geometry.coordinates[0] !== 0 || feature.geometry.coordinates[1] !== 0))
         }
     }
 
@@ -267,13 +233,16 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 //icon.src = treeImgs[Math.floor(Math.random() * 31)]
                 icon.style.cssText = 'width: 14px;'
                 element.appendChild(icon)
-                styleMarkerElement(element, feature.properties.natural)
+                // a feature in the upload queue (e.g. restored after a reload) shows its pending changes
+                const queued = editedFeaturesRef.current[feature.id]?.editingProperties
+                styleMarkerElement(element, queued?.getValue('natural') ?? feature.properties.natural)
+                if (queued?.isDeleted()) element.classList.add('feature-marker-deleted')
                 // add this feature as a marker
                 const featureMarker = new FeatureMarker(feature, {
                     element: element,
                     clickTolerance: 2
                 })
-                featureMarker.setLngLat([feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
+                featureMarker.setLngLat(queued?.getNewPosition() ?? [feature.geometry.coordinates[0], feature.geometry.coordinates[1]])
                 if (map.current) featureMarker.addTo(map.current)
                 element.addEventListener('click', (e) => {
                     selectFeature(feature.id, undefined)
@@ -302,11 +271,14 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         if (featureMarker === undefined) return // e.g. feature created in IdentifierTab, not on the map yet
         const natural = editingProperties?.getValue('natural') ?? feature.properties.natural
         styleMarkerElement(featureMarker.getElement(), natural)
+        // edited position, else the original one (e.g. after Cancel)
+        const [lng, lat] = feature.geometry.coordinates
+        featureMarker.setLngLat(editingProperties?.getNewPosition() ?? [lng, lat])
     }
 
     useEffect(() => {
         if (selectedFeature.value !== null) {
-            // natural type may have changed (IdentifierTab): refresh the marker look
+            // natural type or position may have changed (IdentifierTab, Cancel): refresh the marker
             updateMarker(selectedFeature.value.feature, selectedFeature.value.editingProperties)
         }
     }, [selectedFeature.value])
@@ -373,13 +345,14 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             }
 
             if (locateSelectedFeature && selectedFeature.value !== null) {
-                // locate the current selected feature
+                // locate the current selected feature: only the editing properties get the new position,
+                // feature.geometry keeps the original one (Cancel puts the marker back there)
                 const feature = selectedFeature.value.feature
-                feature.geometry = pointGeom
                 // conserve current editing properties
                 const editingProperties = selectedFeature.value.editingProperties
                 editingProperties.setNewPosition(center)
-                loadFeatures([feature])
+                // a feature without marker yet (created by an identification, at [0, 0]) gets one here
+                if (!(feature.id in featureMarkers.value)) loadFeatures([{ ...feature, geometry: pointGeom }])
                 selectFeature(feature.id, editingProperties)
             } else { // create a new feature and select it
                 const feature: OverpassFeature = {
@@ -453,10 +426,53 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         }
     }
 
-    if (mapTabRef) {
+    useEffect(() => {
+        const reloadedIds = new Set(uploaded.value.features.map((feature) => feature.id))
+        for (const id of uploaded.value.idsToDelete) {
+            if (id > 0 && !reloadedIds.has(id)) deletedIds.current.add(id)
+        }
+        loadFeatures(uploaded.value.features, uploaded.value.idsToDelete)
+    }, [uploaded])
+
+    useEffect(() => {
+        if (map.current) return
+
+        if (mapContainer.current) {
+            map.current = new Map({
+                container: mapContainer.current,
+                style: orthoStyle,
+                center: [lng, lat],
+                zoom: zoom,
+                hash: true
+            })
+
+            map.current.addControl(
+                new NavigationControl({
+                    visualizePitch: true,
+                    showZoom: true,
+                    showCompass: true
+                })
+            )
+
+            const scale = new ScaleControl({
+                maxWidth: 80,
+                unit: 'metric'
+            })
+            map.current.addControl(scale)
+
+            map.current.addControl(new GeolocateControl({
+                positionOptions: {
+                    enableHighAccuracy: true
+                },
+                trackUserLocation: true
+            }))
+
+            map.current.on('load', onMapLoad)
+        }
+    }, [lng, lat, zoom])
+
+    useEffect(() => { // keep the latest closures (current markers and selection)
         mapTabRef.current = onLocateFeature
-    }
-    useEffect(() => { // keep the latest closure (current markers and selection)
         focusFeatureRef.current = focusFeature
     })
 
@@ -468,14 +484,11 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 {selectedFeature.value && <span>id={selectedFeature.value?.feature.id}</span>}
             </a>
             {selectedFeature.value !== null && <div className='selection_info'>
-                <span className='species_name'>{selectedFeature.value.feature.properties.hasOwnProperty('species:fr') ? 
-                    selectedFeature.value.feature.properties['species:fr'] 
-                    : (selectedFeature.value.feature.properties.hasOwnProperty('species') ? 
-                    selectedFeature.value.feature.properties['species'] : 'inconnu')}</span>
+                <span className='species_name'>{getSpeciesName(selectedFeature.value.feature.properties)}</span>
                 <br/>
                 <span>{getNaturalLabel(getNatural(selectedFeature.value))}</span>
             </div>}
-            { map.current && 
+            { mapLoaded && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
                     <button className='maplibregl-ctrl-compass'
                         onClick={() => { setAutoBearing(!autoBearing) }}
@@ -484,7 +497,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                     </button>
                 </div>
             }
-            { map.current && 
+            { mapLoaded && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-map-style'>
                     <button className='maplibregl-ctrl-compass'
                         onClick={switchMapStyle}

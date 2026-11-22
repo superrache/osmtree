@@ -5,6 +5,7 @@ import { FeatureMarker } from "./FeatureMarker"
 export const SelectedFeatureContext = createContext<SelectedFeatureContextValue>({
     value: null,
     setValue: (_: SelectedFeature) => {},
+    previous: null,
     getNewId: () => 0
 })
 
@@ -26,8 +27,9 @@ export const MapContext = createContext<MapContextValue>({
 export const OSMConnectionContext = createContext<OSMConnectionContextValue>({
     value: {
         userName: '',
-        auth: null,
-        osmRequest: null,
+        // never used: App always provides this context with real instances
+        auth: null as unknown as OSMConnection['auth'],
+        osmRequest: null as unknown as OSMConnection['osmRequest'],
         editedFeatures: {}
     },
     setValue: (_: OSMConnection) => {}

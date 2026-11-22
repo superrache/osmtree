@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext } from 'react'
 import './AttributesTab.css'
 import { FeatureMarkersContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import AutocompleteInput from './AutocompleteInput'
@@ -17,8 +17,8 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
     const featureMarkers = useContext(FeatureMarkersContext)
     const uploaded = useContext(UploadedContext)
 
-    // tags of the last validated feature, to duplicate them on the next one (e.g. a row of trees)
-    const [previousFeature, setPreviousFeature] = useState<{id: number, tags: Record<string, string>} | null>(null)
+    // tags of the last edited feature, to duplicate them on the next one (e.g. a row of trees)
+    const previousFeature = selectedFeature.previous
 
     const tagInfoInstance = 'https://taginfo.openstreetmap.org'
 
@@ -34,7 +34,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
         const response = await fetch(url)
         const json = await response.json()
         const suggestions = []
-        for(let d of json.data) {
+        for(const d of json.data) {
           suggestions.push(d.key)
         }
         return suggestions
@@ -46,7 +46,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
         const response = await fetch(url)
         const json = await response.json()
         const suggestions = []
-        for(let d of json.data) {
+        for(const d of json.data) {
           suggestions.push(d.value)
         }
         return suggestions
@@ -89,9 +89,20 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
         }
     }
 
+    // changes that Cancel would revert (a new feature keeps its position: Supprimer removes it)
+    const getCancelableCount = (): number => {
+        if (selectedFeature.value === null) return 0
+        const { feature, editingProperties } = selectedFeature.value
+        const keptPosition = feature.id < 0 && editingProperties.getNewPosition() !== undefined ? 1 : 0
+        return editingProperties.getChangedCount() - keptPosition
+    }
+
     const onCancel = () => {
         if (selectedFeature.value !== null) {
-            const resetEditingProperties = new EditingProperties(selectedFeature.value.feature)
+            const { feature, editingProperties } = selectedFeature.value
+            const resetEditingProperties = new EditingProperties(feature)
+            if (feature.id < 0) resetEditingProperties.setNewPosition(editingProperties.getNewPosition())
+            // the queue follows (SelectedFeatureContext.setValue)
             selectedFeature.setValue({
                 feature: selectedFeature.value.feature,
                 editingProperties: resetEditingProperties
@@ -101,6 +112,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
 
     // replace the upload queue entry of a feature (undefined: remove it from the queue)
     const setEditedFeature = (id: number, editableFeature: EditableFeature | undefined) => {
+        // (most changes reach the queue through SelectedFeatureContext.setValue)
         const editedFeatures = {...osmConnection.value.editedFeatures}
         if (editableFeature === undefined) delete editedFeatures[id]
         else editedFeatures[id] = editableFeature
@@ -139,8 +151,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
         if (selectedFeature.value === null) return
         const { feature, editingProperties } = selectedFeature.value
         editingProperties.setDeleted(false)
-        // keep the feature in the queue only if it has other changes
-        setEditedFeature(feature.id, editingProperties.getChangedCount() > 0 ? { feature, editingProperties } : undefined)
+        // the feature stays in the queue only if it has other changes (SelectedFeatureContext.setValue)
         featureMarkers.value[feature.id]?.getElement().classList.remove('feature-marker-deleted')
         updateVueFromModel()
     }
@@ -168,24 +179,11 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
         updateVueFromModel()
     }
 
-    const onValidate = () => {
-        if (selectedFeature.value !== null && selectedFeature.value.feature.id ) {
-            // send the selected feature to osmConnection.editedFeatures
-            const editedFeatures = osmConnection.value.editedFeatures
-            editedFeatures[selectedFeature.value.feature.id] = selectedFeature.value
-            setPreviousFeature({
-                id: selectedFeature.value.feature.id,
-                tags: selectedFeature.value.editingProperties.getTagsToSend()
-            })
-            osmConnection.setValue({
-                userName: osmConnection.value.userName,
-                auth: osmConnection.value.auth,
-                osmRequest: osmConnection.value.osmRequest,
-                editedFeatures: editedFeatures
-            })
-            // unselect the feature
-            selectedFeature.setValue(null)
-        }
+    // changes are already in the upload queue: just unselect the feature
+    const onDone = () => {
+        if (selectedFeature.value === null) return
+        featureMarkers.value[selectedFeature.value.feature.id]?.getElement().classList.remove('feature-marker-selected')
+        selectedFeature.setValue(null)
     }
 
     return (
@@ -226,7 +224,7 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                         </tbody>
                     ))}
                 </table>
-                {selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] === 0 && <div>Cet élément n'a pas de position géographique. <button onClick={onLocateFeature}>Positionner</button></div>}
+                {selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] === 0 && <div>Cet élément n'a pas de position géographique : il sera enregistré une fois positionné. <button onClick={onLocateFeature}>Positionner</button></div>}
                 {selectedFeature.value.feature.geometry.type === 'Point' && selectedFeature.value.feature.geometry.coordinates[0] !== 0 && <div><button onClick={onLocateFeature}>Déplacer l'élément</button></div>}
                 <div>
                     <button onClick={onDuplicatePrevious} disabled={Object.keys(getTagsToDuplicate()).length === 0}>
@@ -234,11 +232,8 @@ const AttributesTab = ({onLocateFeature}: AttributesTabParams) => {
                     </button>
                 </div>
                 <div className="buttons">
-                    <button onClick={onValidate} disabled={
-                        (selectedFeature.value.feature.geometry.type === 'Point' 
-                        && selectedFeature.value.feature.geometry.coordinates[0] === 0)
-                        || selectedFeature.value.editingProperties.getChangedCount() === 0}>Valider</button>
-                    <button onClick={onCancel} disabled={selectedFeature.value.editingProperties.getChangedCount() === 0}>Annuler</button>
+                    <button onClick={onDone}>Terminer</button>
+                    <button onClick={onCancel} disabled={getCancelableCount() === 0}>Annuler</button>
                     <button className="delete-feature" onClick={onDeleteFeature}>Supprimer</button>
                 </div>
             </div>}

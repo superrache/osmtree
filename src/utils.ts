@@ -35,3 +35,16 @@ export const getNaturalLabel = (natural: string | undefined): string => {
     if (natural === undefined) return ''
     return naturalTypes[natural]?.label ?? natural
 }
+
+// species name to display: French name, else scientific name
+export const getSpeciesName = (properties: Record<string, string>): string => {
+    return properties['species:fr'] ?? properties['species'] ?? 'inconnu'
+}
+
+// a feature goes to the upload queue as soon as it has changes (like iD: no validation step);
+// a feature without position (created by an identification) waits until it is placed
+export const isToUpload = (ef: EditableFeature): boolean => {
+    const [lng, lat] = ef.feature.geometry.coordinates
+    const hasPosition = ef.editingProperties.getNewPosition() !== undefined || lng !== 0 || lat !== 0
+    return ef.editingProperties.isDeleted() || (hasPosition && ef.editingProperties.getChangedCount() > 0)
+}

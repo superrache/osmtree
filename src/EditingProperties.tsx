@@ -7,6 +7,12 @@ export type EditingProperty = {
     status: 'new' | 'deleted' | 'modified' | 'unmodified'
 }
 
+export type StoredEditingProperties = {
+    props: EditingProperty[]
+    newPosition: [number, number] | null // [lng, lat]
+    deleted: boolean
+}
+
 export class EditingProperties {
     props: EditingProperty[]
     newPosition: LngLat | undefined
@@ -33,6 +39,24 @@ export class EditingProperties {
         copy.newPosition = this.newPosition
         copy.deleted = this.deleted
         return copy
+    }
+
+    // plain object for localStorage (newPosition: LngLat class → [lng, lat])
+    toJSON(): StoredEditingProperties {
+        return {
+            props: this.props,
+            newPosition: this.newPosition ? [this.newPosition.lng, this.newPosition.lat] : null,
+            deleted: this.deleted
+        }
+    }
+
+    static fromJSON(feature: OverpassFeature, data: StoredEditingProperties): EditingProperties {
+        const editingProperties = new EditingProperties(feature)
+        editingProperties.props = data.props.map((prop) => ({...prop}))
+        editingProperties.newPosition = data.newPosition ? new LngLat(data.newPosition[0], data.newPosition[1]) : undefined
+        editingProperties.deleted = data.deleted
+        editingProperties.__createEmptyLineAtEnd()
+        return editingProperties
     }
 
     isDeleted(): boolean {
