@@ -15,18 +15,22 @@
     z-index: 500;
     top: 5px;
     left: 5px;
+    display: flex;
+    align-items: center; /* text centred on the icon */
+    gap: 0.25em;
     background-color: #353735;
+    color: white;
     border-radius: 5px;
-    padding-right: 15px;
-    padding-bottom: 5px;
+    padding: 4px 12px 4px 6px;
     font-size: 2em;
+    line-height: 1;
     font-weight: 500;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
 .logo {
+    display: block;
     height: 1em;
-    padding: 0.2em;
 }
 
 .selection_info {
@@ -40,10 +44,36 @@
     border-radius: 5px;
     border: #ff9454 solid 2px;
     padding: 5px;
+    display: flex;
+    align-items: flex-start; /* icon anchored at the top left */
+    gap: 8px;
+}
+
+/* natural type icon, drawn like the map marker */
+.selection_icon {
+    flex: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 100%;
+}
+
+.selection_icon img {
+    width: 24px;
 }
 
 .species_name {
     font-weight: 900;
+}
+
+.genus_name {
+    font-style: italic;
+}
+
+.feature_id {
+    font-size: 0.8em;
 }
 
 .loading {

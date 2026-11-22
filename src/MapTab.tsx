@@ -44,7 +44,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
 import { getBounds, getNatural, getNaturalLabel, getSpeciesName, getTagsCompleteness } from './utils'
 import { EditableFeature, MapTabParams, OverpassFeature } from './types'
-import { naturalTypes } from './consts'
+import { naturalTypes, osmConfig } from './consts'
 import { FeatureMarker } from './FeatureMarker'
 import { FeatureMarkersContext, MapContext, OSMConnectionContext, SelectedFeatureContext, UploadedContext } from './contexts'
 import { EditingProperties } from './EditingProperties'
@@ -508,16 +508,32 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
 
     return (
         <div id="map" className="map" ref={mapContainer}>
-            <a className="title">
-                <img src={logo} className="logo" alt="osmtree" />
-                osmtree
-                {selectedFeature.value && <span>id={selectedFeature.value?.feature.id}</span>}
-            </a>
-            {selectedFeature.value !== null && <div className='selection_info'>
-                <span className='species_name'>{getSpeciesName(selectedFeature.value.feature.properties)}</span>
-                <br/>
-                <span>{getNaturalLabel(getNatural(selectedFeature.value))}</span>
-            </div>}
+            <div className="title">
+                <img src={logo} className="logo" alt="" />
+                <span>osmtree</span>
+            </div>
+            {selectedFeature.value !== null && (() => {
+                // edited tags, so that the text follows the changes
+                const tags = selectedFeature.value.editingProperties.getTagsToSend()
+                const id = selectedFeature.value.feature.id
+                const natural = getNatural(selectedFeature.value)
+                const naturalType = natural !== undefined ? naturalTypes[natural] : undefined
+                return <div className='selection_info'>
+                    {naturalType && <div className='selection_icon' style={{ backgroundColor: naturalType.color }}>
+                        <img src={naturalType.icon} alt='' />
+                    </div>}
+                    <div>
+                        <div className='species_name'>{getSpeciesName(tags)}</div>
+                        {tags['genus'] && <div className='genus_name'>{tags['genus']}</div>}
+                        <div>{getNaturalLabel(natural)}</div>
+                        <div className='feature_id'>
+                            {id > 0
+                                ? <a href={`${osmConfig.url}/node/${id}`} target='_blank' rel='noreferrer'>node/{id}</a>
+                                : `nouvel élément (id temporaire ${id})`}
+                        </div>
+                    </div>
+                </div>
+            })()}
             { mapLoaded && 
                 <div className='maplibregl-ctrl maplibregl-ctrl-group switch-auto-bearing'>
                     <button className='maplibregl-ctrl-compass'
