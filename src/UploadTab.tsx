@@ -1,6 +1,10 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import "./UploadTab.css";
-import { OSMConnectionContext, UploadedContext } from "./contexts";
+import {
+  OSMConnectionContext,
+  SelectedFeatureContext,
+  UploadedContext,
+} from "./contexts";
 import { OverpassFeature, UploadTabParams } from "./types";
 import { buildChangesetComment, CommentedEdit } from "./changesetComment";
 import { getNatural } from "./utils";
@@ -8,6 +12,7 @@ import { getNatural } from "./utils";
 const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   const osmConnection = useContext(OSMConnectionContext);
   const uploaded = useContext(UploadedContext);
+  const selectedFeature = useContext(SelectedFeatureContext);
 
   // comment typed by the user, null: use the automatic one
   const [customComment, setCustomComment] = useState<string | null>(null);
@@ -174,6 +179,33 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
     });
   };
 
+  // revert every queued change: new features disappear, the others are redrawn
+  // as loaded from OSM (same path as after an upload, through UploadedContext)
+  const onCancelAll = () => {
+    const editedFeatures = Object.values(osmConnection.value.editedFeatures);
+    if (
+      !window.confirm(
+        `Annuler les modifications de ${editedFeatures.length} élément(s) ?`,
+      )
+    )
+      return;
+    // unselect first: a selected feature with changes would go back to the queue
+    const selected = selectedFeature.value;
+    if (
+      selected !== null &&
+      selected.feature.id in osmConnection.value.editedFeatures
+    )
+      selectedFeature.setValue(null);
+    osmConnection.setValue({ ...osmConnection.value, editedFeatures: {} });
+    uploaded.setValue({
+      features: editedFeatures
+        .filter(({ feature }) => feature.id > 0)
+        .map(({ feature }) => feature), // original tags and position
+      idsToDelete: editedFeatures.map(({ feature }) => feature.id),
+    });
+    setLogs([`Modifications de ${editedFeatures.length} élément(s) annulées`]);
+  };
+
   const onEditedFeatureClick = (id: number) => {
     onShowFeature(osmConnection.value.editedFeatures[id]);
   };
@@ -245,6 +277,13 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
                 },
               )}
             </ul>
+          )}
+          {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
+            <div>
+              <button className="cancel-all" onClick={onCancelAll}>
+                Tout annuler
+              </button>
+            </div>
           )}
           <br />
           <input

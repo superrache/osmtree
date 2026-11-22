@@ -18,6 +18,7 @@ import NotificationBadge from "./NotificationBadge"
 import WikiTab from "./WikiTab"
 import { FeatureMarker } from "./FeatureMarker"
 import { loadEditedFeatures, saveEditedFeatures } from "./editedFeaturesStorage"
+import { getSpeciesWikidata } from "./wikidata"
 import { isToUpload } from "./utils"
 
 // single instances for the whole app (osm-request uses osm-auth once connected)
@@ -70,6 +71,33 @@ const App = () => {
     useEffect(() => {
         saveEditedFeatures(osmConnection.editedFeatures)
     }, [osmConnection.editedFeatures])
+
+    // a selected feature with species or species:fr but no species:wikidata gets it automatically
+    // (like any change, it goes to the upload queue; Annuler reverts it)
+    const selectedId = selectedFeature?.feature.id
+    useEffect(() => {
+        const selection = selectedFeatureRef.current
+        if (selection === null || selection.editingProperties.isDeleted()) return
+        const tags = selection.editingProperties.getTagsToSend()
+        // a deleted species:wikidata (still in the list) was removed on purpose: don't add it back
+        if (selection.editingProperties.getProps().some((prop) => prop.key === 'species:wikidata')) return
+        const species = tags['species']
+        const speciesFr = tags['species:fr']
+        if (species === undefined && speciesFr === undefined) return
+        let cancelled = false
+        getSpeciesWikidata(species, speciesFr).then((wikidata) => {
+            const current = selectedFeatureRef.current
+            if (cancelled || wikidata === undefined || current === null || current.feature.id !== selection.feature.id) return
+            // the tags may have changed during the lookup
+            const currentTags = current.editingProperties.getTagsToSend()
+            if (currentTags['species'] !== species || currentTags['species:fr'] !== speciesFr
+                || current.editingProperties.getProps().some((prop) => prop.key === 'species:wikidata')) return
+            console.log(`species:wikidata=${wikidata} added to ${current.feature.id}`)
+            current.editingProperties.modifyValue('species:wikidata', wikidata)
+            setSelection({ ...current })
+        })
+        return () => { cancelled = true }
+    }, [selectedId]) // on selection only (setSelection uses refs)
 
     const mapTabRef = useRef<(() => void) | undefined>(undefined)
     const focusFeatureRef = useRef<((feature: EditableFeature) => void) | undefined>(undefined)
