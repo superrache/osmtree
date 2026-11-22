@@ -164,7 +164,13 @@ const fr = {
     'upload.log.deleteTag': 'Suppression du tag {key}',
     'upload.log.updateTags': 'Mise à jour des autres tags',
     'upload.log.sendElement': "Envoi de l'élément",
-    'upload.log.close': 'Fermeture du groupe de modification'
+    'upload.log.close': 'Fermeture du groupe de modification',
+
+    // wiki
+    'wiki.wikipedia': 'Wikipédia',
+    'wiki.wikidata': 'Wikidata',
+    'wiki.noWikidata': "Cet élément n'a pas de species:wikidata.",
+    'wiki.noSpecies': "Sélectionne un élément dont l'espèce est renseignée."
 }
 
 export type MessageKey = keyof typeof fr
@@ -283,7 +289,12 @@ const en: Messages = {
     'upload.log.deleteTag': 'Deleting the tag {key}',
     'upload.log.updateTags': 'Updating the other tags',
     'upload.log.sendElement': 'Uploading the feature',
-    'upload.log.close': 'Closing the changeset'
+    'upload.log.close': 'Closing the changeset',
+
+    'wiki.wikipedia': 'Wikipedia',
+    'wiki.wikidata': 'Wikidata',
+    'wiki.noWikidata': 'This feature has no species:wikidata.',
+    'wiki.noSpecies': 'Select a feature with a species.'
 }
 
 const dictionaries: Record<Lang, Messages> = { fr, en }

@@ -15,15 +15,14 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
   const uploaded = useContext(UploadedContext);
   const selectedFeature = useContext(SelectedFeatureContext);
 
-  // comment typed by the user, null: use the automatic one
-  const [customComment, setCustomComment] = useState<string | null>(null);
+  // comment typed by the user (with the automatic comment of that moment), null: automatic one
+  const [customComment, setCustomComment] = useState<{
+    text: string;
+    autoComment: string;
+  } | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [lastChangesetId, setLastChangesetId] = useState<number>(0);
   const logContainerRef = useRef<HTMLDivElement>(null);
-
-  const commentChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomComment(event.target.value);
-  };
 
   const resetLogs = async () => {
     setLogs([]);
@@ -56,8 +55,21 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
     return buildChangesetComment(edits);
   }, [osmConnection.value]);
 
-  // a comment typed by the user wins; clearing the field brings the automatic one back
-  const comment = customComment || autoComment;
+  // a comment written by the user wins until the upload; an emptied field stays empty
+  // (send button disabled) until the queue changes, then the automatic comment comes back
+  const comment =
+    customComment !== null &&
+    (customComment.text !== "" || customComment.autoComment === autoComment)
+      ? customComment.text
+      : autoComment;
+
+  const commentChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const text = event.target.value;
+    // typing the automatic comment again gives it back its automatic updates
+    setCustomComment(
+      text === autoComment ? null : { text: text, autoComment: autoComment },
+    );
+  };
 
   const onSend = async () => {
     resetLogs();
@@ -209,6 +221,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
         .map(({ feature }) => feature), // original tags and position
       idsToDelete: editedFeatures.map(({ feature }) => feature.id),
     });
+    setCustomComment(null); // empty queue: automatic comment again
     setLogs([t("upload.cancelledAll", { n: editedFeatures.length })]);
   };
 
@@ -218,7 +231,6 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
 
   return (
     <div className="upload_tab">
-      <br />
       <label className="language">
         {t("upload.language")}{" "}
         <select
@@ -232,76 +244,76 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           ))}
         </select>
       </label>
-      <br />
-      {osmConnection.value.auth.authenticated() ? (
-        <span>
-          {t("upload.connected")}{" "}
-          <a href="https://www.openstreetmap.org" target="_blank">
-            OpenStreetMap
-          </a>
-        </span>
-      ) : (
-        <span>
-          {t("upload.loginRequired", { osm: "OpenStreetMap" })}
-        </span>
-      )}
-      <br />
-      {!osmConnection.value.auth.authenticated() && (
-        <div>
-          <button onClick={osmLogin}>{t("upload.login")}</button>
-        </div>
-      )}
+      {/* OSM account: connection state, user, log in / log out */}
+      <div className="upload-group">
+        {osmConnection.value.auth.authenticated() ? (
+          <>
+            <div>
+              {t("upload.connected")}{" "}
+              <a href="https://www.openstreetmap.org" target="_blank">
+                OpenStreetMap
+              </a>
+            </div>
+            <div>
+              {t("upload.welcome")}{" "}
+              <a
+                href={
+                  "https://www.openstreetmap.org/user/" +
+                  osmConnection.value.userName
+                }
+                target="_blank"
+              >
+                {osmConnection.value.userName}
+              </a>
+            </div>
+            <button onClick={osmLogout}>{t("upload.logout")}</button>
+          </>
+        ) : (
+          <>
+            <div>{t("upload.loginRequired", { osm: "OpenStreetMap" })}</div>
+            <button onClick={osmLogin}>{t("upload.login")}</button>
+          </>
+        )}
+      </div>
       {osmConnection.value.auth.authenticated() && (
         <div>
-          {t("upload.welcome")}{" "}
-          <a
-            href={
-              "https://www.openstreetmap.org/user/" +
-              osmConnection.value.userName
-            }
-            target="_blank"
-          >
-            {osmConnection.value.userName}
-          </a>
-          <br />
-          <button onClick={osmLogout}>{t("upload.logout")}</button>
-          <br />
-          <br />
-          {t("upload.ready")}
-          {Object.keys(osmConnection.value.editedFeatures).length === 0 && (
-            <div>{t("upload.none")}</div>
-          )}
-          {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
-            <ul>
-              {Object.values(osmConnection.value.editedFeatures).map(
-                (feature, index) => {
-                  return (
-                    <li
-                      key={index}
-                      onClick={() => onEditedFeatureClick(feature.feature.id)}
-                    >
-                      <a>
-                        {getNaturalLabel(getNatural(feature))}{" "}
-                        {feature.feature.id < 0
-                          ? `(${t("upload.newFeature", { n: -feature.feature.id })})`
-                          : feature.feature.id}
-                        {feature.editingProperties.isDeleted() &&
-                          t("upload.deletion")}
-                      </a>
-                    </li>
-                  );
-                },
-              )}
-            </ul>
-          )}
-          {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
-            <div>
-              <button className="cancel-all" onClick={onCancelAll}>
-                {t("upload.cancelAll")}
-              </button>
-            </div>
-          )}
-          <br />
+          {/* upload queue: features to upload, Tout annuler */}
+          <div className="upload-group">
+            {t("upload.ready")}
+            {Object.keys(osmConnection.value.editedFeatures).length === 0 && (
+              <div>{t("upload.none")}</div>
+            )}
+            {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
+              <ul>
+                {Object.values(osmConnection.value.editedFeatures).map(
+                  (feature, index) => {
+                    return (
+                      <li
+                        key={index}
+                        onClick={() => onEditedFeatureClick(feature.feature.id)}
+                      >
+                        <a>
+                          {getNaturalLabel(getNatural(feature))}{" "}
+                          {feature.feature.id < 0
+                            ? `(${t("upload.newFeature", { n: -feature.feature.id })})`
+                            : feature.feature.id}
+                          {feature.editingProperties.isDeleted() &&
+                            t("upload.deletion")}
+                        </a>
+                      </li>
+                    );
+                  },
+                )}
+              </ul>
+            )}
+            {Object.keys(osmConnection.value.editedFeatures).length > 0 && (
+              <div>
+                <button className="cancel-all" onClick={onCancelAll}>
+                  {t("upload.cancelAll")}
+                </button>
+              </div>
+            )}
+          </div>
           <input
             type="text"
             className="comment"
@@ -312,7 +324,7 @@ const UploadTab = ({ osmLogin, osmLogout, onShowFeature }: UploadTabParams) => {
           <button
             disabled={
               Object.keys(osmConnection.value.editedFeatures).length === 0 ||
-              comment.length === 0
+              comment.trim().length === 0
             }
             onClick={onSend}
           >

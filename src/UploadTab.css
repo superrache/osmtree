@@ -3,8 +3,30 @@
     margin: 10px;
 }
 
+.language {
+    display: block;
+    margin-top: 10px;
+}
+
+/* groups of the tab (OSM account, upload queue), set apart by a light frame */
+.upload-group {
+    width: 90%;
+    margin: 20px 10px;
+    padding: 10px;
+    border: 1px solid #555;
+    border-radius: 8px;
+}
+
+.upload-group button {
+    margin: 10px 0 0 0;
+}
+
 .upload_tab li {
     list-style: disc;
+}
+
+.upload-group ul {
+    margin: 5px 0;
 }
 
 .comment {
