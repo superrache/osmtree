@@ -1,6 +1,6 @@
 import { Map } from "maplibre-gl"
-import { EditableFeature } from "./types"
-import { naturalTypes } from "./consts"
+import { EditableFeature, ExpectedTag } from "./types"
+import { expectedTags, naturalTypes } from "./consts"
 
 // API (Cloudflare Pages Functions) is always served on the same origin as the client
 // (in dev, Vite proxies /api to `wrangler pages dev`)
@@ -48,3 +48,13 @@ export const isToUpload = (ef: EditableFeature): boolean => {
     const hasPosition = ef.editingProperties.getNewPosition() !== undefined || lng !== 0 || lat !== 0
     return ef.editingProperties.isDeleted() || (hasPosition && ef.editingProperties.getChangedCount() > 0)
 }
+
+// expected tags that are not set yet
+export const getMissingExpectedTags = (tags: Record<string, string>): ExpectedTag[] => {
+    const keys = Object.keys(tags).filter((key) => tags[key] !== '')
+    return expectedTags.filter(({ pattern }) => !keys.some((key) => pattern.test(key)))
+}
+
+// share (0 to 1) of the expected tags that are set
+export const getTagsCompleteness = (tags: Record<string, string>): number =>
+    1 - getMissingExpectedTags(tags).length / expectedTags.length

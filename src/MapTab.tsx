@@ -42,7 +42,7 @@ import { Map, StyleSpecification, NavigationControl, ScaleControl, GeolocateCont
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './MapTab.css'
-import { getBounds, getNatural, getNaturalLabel, getSpeciesName } from './utils'
+import { getBounds, getNatural, getNaturalLabel, getSpeciesName, getTagsCompleteness } from './utils'
 import { EditableFeature, MapTabParams, OverpassFeature } from './types'
 import { naturalTypes } from './consts'
 import { FeatureMarker } from './FeatureMarker'
@@ -249,6 +249,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
                 // a feature in the upload queue (e.g. restored after a reload) shows its pending changes
                 const queued = editedFeaturesRef.current[feature.id]?.editingProperties
                 styleMarkerElement(element, queued?.getValue('natural') ?? feature.properties.natural)
+                setMarkerCompleteness(element, queued?.getTagsToSend() ?? feature.properties)
                 if (queued?.isDeleted()) element.classList.add('feature-marker-deleted')
                 // add this feature as a marker
                 const featureMarker = new FeatureMarker(feature, {
@@ -272,9 +273,15 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
     const styleMarkerElement = (element: HTMLElement, natural: string | undefined) => {
         const naturalType = natural !== undefined ? naturalTypes[natural] : undefined
         if (naturalType === undefined) return
-        element.style.backgroundColor = naturalType.color
+        // painted by .feature-marker::after, above the completeness pie (::before)
+        element.style.setProperty('--marker-color', naturalType.color)
         const icon = element.querySelector('img')
         if (icon) icon.src = naturalType.icon
+    }
+
+    // fill the completeness pie behind the marker (expectedTags), clockwise from the top
+    const setMarkerCompleteness = (element: HTMLElement, tags: Record<string, string>) => {
+        element.style.setProperty('--completeness', `${Math.round(getTagsCompleteness(tags) * 360)}deg`)
     }
 
     // update the existing marker in place (no remove/recreate: keeps the selection,
@@ -284,6 +291,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
         if (featureMarker === undefined) return // e.g. feature created in IdentifierTab, not on the map yet
         const natural = editingProperties?.getValue('natural') ?? feature.properties.natural
         styleMarkerElement(featureMarker.getElement(), natural)
+        setMarkerCompleteness(featureMarker.getElement(), editingProperties?.getTagsToSend() ?? feature.properties)
         // edited position, else the original one (e.g. after Cancel)
         const [lng, lat] = feature.geometry.coordinates
         featureMarker.setLngLat(editingProperties?.getNewPosition() ?? [lng, lat])
@@ -447,7 +455,7 @@ const MapTab = ({mapTabRef, focusFeatureRef}: MapTabParams) => {
             if (id > 0 && !reloadedIds.has(id)) deletedIds.current.add(id)
         }
         loadFeatures(uploaded.value.features, uploaded.value.idsToDelete)
-    }, [uploaded])
+    }, [uploaded.value]) // the state, not the context object (new at each App render)
 
     useEffect(() => {
         if (map.current) return

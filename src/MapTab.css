@@ -61,7 +61,6 @@
     display: block;
     border: none;
     border-radius: 100%;
-    outline: 2px solid white;
     cursor: pointer;
     padding: 3px;
     width: 20px;
@@ -71,8 +70,30 @@
     align-items: center;
 }
 
+/* completeness pie (expectedTags), larger than the marker: white share filled clockwise from the top */
+.feature-marker::before {
+    content: '';
+    position: absolute;
+    inset: -7px;
+    border-radius: 100%;
+    background: conic-gradient(white var(--completeness, 0deg), rgba(0, 0, 0, 0.45) 0);
+    z-index: -2;
+}
+
+/* natural type colour, above the pie (the element's own background would be under it) */
+.feature-marker::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 100%;
+    background-color: var(--marker-color, #777);
+    z-index: -1;
+}
+
+/* outside the pie, so that it stays visible */
 .feature-marker-selected {
-    outline: 8px solid #ff9454;
+    outline: 4px solid #ff9454;
+    outline-offset: 7px;
 }
 
 .creating-position-buttons {

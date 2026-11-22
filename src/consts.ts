@@ -16,7 +16,7 @@ import leafImg from './assets/leaf.svg'
 import flowerImg from './assets/flower.svg'
 import fruitImg from './assets/fruit.svg'
 import barkImg from './assets/bark.svg'
-import { Combination, NaturalType, Organ } from './types'
+import { Combination, ExpectedTag, NaturalType, Organ } from './types'
 
 export const naturalTypes: Record<string, NaturalType> = {
     'tree': {
@@ -35,6 +35,17 @@ export const naturalTypes: Record<string, NaturalType> = {
         label: 'Herbacée'
     }
 }
+
+// expected tags, shown by the completeness pie drawn behind each marker:
+// one share per entry, filled when one of the keys it matches is set
+// (key: added to the attributes table by a click on the missing tag)
+export const expectedTags: ExpectedTag[] = [
+    { label: 'leaf_type', key: 'leaf_type', pattern: /^leaf_type$/ },
+    { label: 'leaf_cycle', key: 'leaf_cycle', pattern: /^leaf_cycle$/ },
+    { label: 'species:wikidata', key: 'species:wikidata', pattern: /^species:wikidata$/ },
+    { label: 'species ou species:xx', key: 'species', pattern: /^species(:[a-z]{2,3}([-_][A-Za-z]+)?)?$/ }, // any language
+    { label: 'genus', key: 'genus', pattern: /^genus$/ }
+]
 
 export const combinations: Record<string, Combination> = {
     'denotation': {

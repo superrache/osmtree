@@ -64,6 +64,13 @@ export type MapTabParams = {
     focusFeatureRef: React.RefObject<((feature: EditableFeature) => void) | undefined>
 }
 
+// tag expected on a feature (completeness pie of the markers)
+export type ExpectedTag = {
+    label: string // shown in the missing tags text
+    key: string // added to the attributes table on a click
+    pattern: RegExp // keys that fill this share
+}
+
 export type NaturalType = {
     icon: string
     color: string
