@@ -1,4 +1,5 @@
-import { LngLat } from "maplibre-gl"
+// plain {lng, lat} (a maplibre LngLat fits): no maplibre import, so it stays out of the main bundle
+export type Position = { lng: number, lat: number }
 import { OverpassFeature } from "./types"
 
 export type EditingProperty = {
@@ -16,7 +17,7 @@ export type StoredEditingProperties = {
 
 export class EditingProperties {
     props: EditingProperty[]
-    newPosition: LngLat | undefined
+    newPosition: Position | undefined
     deleted: boolean // the whole feature is to be deleted from OSM
     // tags in OSM, the reference of every status (empty for a new feature, not in OSM yet)
     readonly originalTags: Record<string, string>
@@ -48,7 +49,7 @@ export class EditingProperties {
         return copy
     }
 
-    // plain object for localStorage (newPosition: LngLat class → [lng, lat])
+    // plain object for localStorage (newPosition → [lng, lat])
     toJSON(): StoredEditingProperties {
         return {
             props: this.props,
@@ -66,7 +67,7 @@ export class EditingProperties {
             }
             return {...prop}
         })
-        editingProperties.newPosition = data.newPosition ? new LngLat(data.newPosition[0], data.newPosition[1]) : undefined
+        editingProperties.newPosition = data.newPosition ? { lng: data.newPosition[0], lat: data.newPosition[1] } : undefined
         editingProperties.deleted = data.deleted
         editingProperties.__update()
         return editingProperties
@@ -188,11 +189,11 @@ export class EditingProperties {
         return c
     }
 
-    getNewPosition(): LngLat | undefined {
+    getNewPosition(): Position | undefined {
         return this.newPosition
     }
 
-    setNewPosition(newPos: LngLat | undefined) {
+    setNewPosition(newPos: Position | undefined) {
         this.newPosition = newPos
     }
 

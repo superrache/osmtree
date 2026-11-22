@@ -1,6 +1,6 @@
 import type { Feature as GeoJSONFeature, Point } from "geojson"
 import { EditingProperties } from "./EditingProperties"
-import { FeatureMarker } from "./FeatureMarker"
+import type { FeatureMarker } from "./FeatureMarker"
 import type { osmAuth } from "osm-auth"
 
 export type Tab = {

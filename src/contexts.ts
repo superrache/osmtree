@@ -1,6 +1,6 @@
 import { createContext } from "react"
 import { FeatureMarkersValue, MapContextValue, OSMConnection, OSMConnectionContextValue, SelectedFeature, SelectedFeatureContextValue, Uploaded, UploadedContextValue } from "./types"
-import { FeatureMarker } from "./FeatureMarker"
+import type { FeatureMarker } from "./FeatureMarker"
 
 export const SelectedFeatureContext = createContext<SelectedFeatureContextValue>({
     value: null,

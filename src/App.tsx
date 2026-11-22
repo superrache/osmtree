@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useRef, useState } from "react"
 import './App.css'
 import mapImg from './assets/map.svg'
 import attributesImg from './assets/attributes.svg'
@@ -6,7 +6,6 @@ import identifyImg from './assets/identify.svg'
 import imageImg from './assets/image.svg'
 import uploadImg from './assets/upload.svg'
 import IdentifierTab from "./IdentifierTab"
-import MapTab from "./MapTab"
 import AttributesTab from "./AttributesTab"
 import UploadTab from "./UploadTab"
 import { EditableFeature, OSMConnection, OsmRequestClient, PreviousFeature, SelectedFeature, Tab, Uploaded } from "./types"
@@ -16,11 +15,14 @@ import OsmRequest from 'osm-request'
 import { osmConfig } from "./consts"
 import NotificationBadge from "./NotificationBadge"
 import WikiTab from "./WikiTab"
-import { FeatureMarker } from "./FeatureMarker"
+import type { FeatureMarker } from "./FeatureMarker"
 import { loadEditedFeatures, saveEditedFeatures } from "./editedFeaturesStorage"
 import { getSpeciesWikidata } from "./wikidata"
 import { lang, localizedSpeciesKey, t } from "./i18n"
 import { isToUpload } from "./utils"
+
+// MapLibre (~1 MB) is only loaded by the map tab: separate chunk, the rest of the UI renders first
+const MapTab = lazy(() => import("./MapTab"))
 
 // single instances for the whole app (osm-request uses osm-auth once connected)
 const auth = new osmAuth(osmConfig)
@@ -175,7 +177,7 @@ const App = () => {
     }
 
     const tabs: Tab[] = [
-        { icon: mapImg, label: t('tab.map'), notificationCount: 0, content: <MapTab mapTabRef={mapTabRef} focusFeatureRef={focusFeatureRef}></MapTab> },
+        { icon: mapImg, label: t('tab.map'), notificationCount: 0, content: <Suspense fallback={null}><MapTab mapTabRef={mapTabRef} focusFeatureRef={focusFeatureRef}></MapTab></Suspense> },
         { icon: attributesImg, label: t('tab.attributes'), notificationCount: changedAttributesCount, content: <AttributesTab onLocateFeature={handleOnLocateFeature}></AttributesTab> },
         { icon: identifyImg, label: t('tab.identify'), notificationCount: 0, content: <IdentifierTab></IdentifierTab> },
         { icon: imageImg, label: t('tab.wiki'), notificationCount: 0, content: <WikiTab></WikiTab> },

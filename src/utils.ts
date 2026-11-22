@@ -1,4 +1,4 @@
-import { Map } from "maplibre-gl"
+import type { Map } from "maplibre-gl"
 import { EditableFeature, ExpectedTag } from "./types"
 import { expectedTags, naturalTypes } from "./consts"
 import { localizedSpeciesKey, t } from "./i18n"
